@@ -14,25 +14,24 @@ const Navbar = ({ isAuthenticated, setIsAuthenticated }) => {
     navigate("/login");
   };
 
-  const words = "University Connect".split(" ");
-
   return (
     <div className="relative w-full">
       {/* Navbar */}
-      <nav className="relative z-10 flex items-center justify-between px-6 py-4 bg-[#0a0f1d]/90 border-b border-[#00fffc] shadow-lg backdrop-blur-lg">
-        {/* Animated Logo */}
-        <Link to="/" className="text-2xl font-bold text-white flex space-x-2">
-          {words.map((word, index) => (
-            <motion.span
-              key={index}
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: index * 0.2 }}
-              className="hover:text-[#00e6e6] transition-transform transform hover:scale-110"
-            >
-              {word}
-            </motion.span>
-          ))}
+      <motion.nav
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7, ease: "easeOut" }}
+        className="relative z-50 flex items-center justify-between px-8 py-4 bg-[#0a0f1d]/90 backdrop-blur-xl border-b border-[#00fffc] shadow-lg"
+      >
+        {/* Logo */}
+        <Link to="/" className="text-3xl font-extrabold text-white tracking-wide">
+          <motion.span
+            whileHover={{ scale: 1.1, textShadow: "0px 0px 10px #00fffc" }}
+            transition={{ duration: 0.3 }}
+            className="hover:text-[#00e6e6] cursor-pointer"
+          >
+            University Connect
+          </motion.span>
         </Link>
 
         {/* Desktop Menu */}
@@ -47,9 +46,9 @@ const Navbar = ({ isAuthenticated, setIsAuthenticated }) => {
               <div className="relative">
                 <motion.button
                   onClick={() => setDropdownOpen(!dropdownOpen)}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#131a2b]/80 border border-[#00fffc] text-white font-bold rounded-md shadow-lg hover:bg-[#00fffc] hover:text-[#0a0f1d] transition-all duration-300"
+                  whileHover={{ scale: 1.1, backgroundColor: "#00fffc", color: "#0a0f1d" }}
+                  transition={{ duration: 0.3 }}
+                  className="flex items-center gap-2 px-4 py-2 bg-[#131a2b]/80 border border-[#00fffc] text-white font-bold rounded-md shadow-lg hover:shadow-[#00fffc] transition-all duration-300"
                 >
                   <FaUserCircle size={20} className="text-[#00fffc]" /> Profile
                 </motion.button>
@@ -60,7 +59,7 @@ const Navbar = ({ isAuthenticated, setIsAuthenticated }) => {
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
-                      className="absolute right-0 mt-2 w-44 bg-[#131a2b]/90 border border-[#00fffc] rounded-md shadow-lg"
+                      className="absolute right-0 mt-2 w-48 bg-[#131a2b]/90 border border-[#00fffc] rounded-md shadow-lg"
                     >
                       <Link
                         to="/profile"
@@ -87,20 +86,20 @@ const Navbar = ({ isAuthenticated, setIsAuthenticated }) => {
 
         {/* Mobile Menu Button */}
         <button className="md:hidden text-white" onClick={() => setMenuOpen(!menuOpen)}>
-          {menuOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
+          {menuOpen ? <FaTimes size={28} /> : <FaBars size={28} />}
         </button>
-      </nav>
+      </motion.nav>
 
       {/* Mobile Menu */}
       <AnimatePresence>
         {menuOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
+            exit={{ opacity: 0, y: -20 }}
             className="md:hidden absolute top-16 left-0 w-full bg-[#0a0f1d] border-t border-[#00fffc] shadow-lg"
           >
-            <div className="flex flex-col items-center gap-4 py-4">
+            <div className="flex flex-col items-center gap-4 py-6">
               {isAuthenticated ? (
                 <>
                   <Link to="/students" className="nav-link">Student Connect</Link>
@@ -127,9 +126,10 @@ const Navbar = ({ isAuthenticated, setIsAuthenticated }) => {
           .nav-link {
             color: white;
             font-weight: bold;
-            padding: 8px 12px;
+            padding: 8px 14px;
             border-radius: 8px;
             transition: all 0.3s ease-in-out;
+            text-transform: uppercase;
           }
           .nav-link:hover {
             background-color: #00fffc;
@@ -140,7 +140,7 @@ const Navbar = ({ isAuthenticated, setIsAuthenticated }) => {
 
           .dropdown-item {
             display: block;
-            padding: 10px 16px;
+            padding: 12px 18px;
             font-weight: bold;
             color: white;
             transition: background 0.3s;

@@ -9,6 +9,7 @@ import Certifications from "./pages/Certifications";
 import TalentMarketplace from "./pages/TalentMarketplace";
 import ProfileSetup from "./pages/ProfileSetup";
 import studentConnect from "./pages/StudentConnect";
+import Footer from "./components/Footer";
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem("token"));
@@ -35,6 +36,7 @@ const App = () => {
         <Route path="/certifications" element={isAuthenticated ? <Certifications /> : <Navigate to="/login" />} />
         <Route path="/talent-marketplace" element={isAuthenticated ? <TalentMarketplace /> : <Navigate to="/login" />} />
       </Routes>
+      <Footer/>
     </Router>
   );
 };
