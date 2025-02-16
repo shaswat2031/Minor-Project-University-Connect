@@ -1,4 +1,3 @@
-Here’s an expanded **README.md** file with even more details, including step-by-step setup, troubleshooting, and project descriptions.  
 
 ---
 
