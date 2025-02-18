@@ -19,7 +19,7 @@ This project has two main directories:
 ## **Features**  
 
 ### **Frontend Features (React + Vite)**  
-✅ **Home Page** - Showcases the platform's main features.  
+✅ **Home Page** - Showcases the platform's main features .  
 ✅ **Authentication** - Register/Login using username and password.  
 ✅ **Student Connect** - Fill out academic details, view student profiles, and message students.  
 ✅ **Talent Marketplace** - Users can list their services, such as web development, tutoring, etc.  
