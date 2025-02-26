@@ -2,12 +2,14 @@ import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { FaLinkedin, FaCheckCircle } from "react-icons/fa";
+import { Parallax } from "react-parallax"; // Import Parallax component
 import team1 from "../assets/harshita.jpg";
 import team2 from "../assets/sugam.jpg";
 import team3 from "../assets/vansh.jpg";
 import Hero from "../assets/Adult.jpeg";
 import team4 from "../assets/shaswat.jpg";
 import certification from "../assets/Certificate.jpeg";
+import Parallaxeffect from "../assets/parallaxeffect.jpeg";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -68,7 +70,7 @@ const Home = () => {
               {" "}
               connect, collaborate, and grow.
             </span>{" "}
-            Whether you're looking to showcase your skills, find mentors, or
+            Whether you&apos;re looking to showcase your skills, find mentors, or
             explore new opportunities, this platform provides the perfect space
             for students to
             <span className="font-semibold"> engage and thrive.</span>
@@ -84,7 +86,7 @@ const Home = () => {
             is your gateway to success.
           </p>
           <p className="text-lg text-gray-300 font-medium leading-relaxed mt-4">
-            Whether you're a student looking for internship opportunities, a
+            Whether you&apos;re a student looking for internship opportunities, a
             freelancer offering services, or an aspiring entrepreneur seeking
             collaborators, this platform equips you with the right tools to take
             your ambitions to the next level.
@@ -108,7 +110,7 @@ const Home = () => {
                 "Harshita ensures a seamless user experience by crafting intuitive designs and structuring platform documentation. She plays a vital role in UI/UX improvements, platform accessibility, and maintaining well-organized project reports. Her keen eye for design and documentation helps keep the project both user-friendly and professionally documented.",
             },
             {
-              name: "Sugam Sharma",
+              name: "Sugam Bhardwaj",
               role: "UI/UX Designer",
               img: team2,
               linkedin: "https://www.linkedin.com/in/sugam-sharma-758660253",
@@ -254,54 +256,82 @@ const Home = () => {
         </div>
       </section>
 
+      {/* Parallax Section */}
+      <Parallax
+        bgImage={Parallaxeffect} // Replace with your image path
+        strength={300} // Adjust the strength of the parallax effect
+      >
+        <div className="h-[400px] flex items-center justify-center text-black">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7 }}
+            className="text-center"
+          >
+            <h2 className="text-4xl font-extrabold mb-6 text-blue-400">
+              Get Certified Today!
+            </h2>
+            <p className="text-4xl text-white font-medium leading-relaxed">
+              Validate your skills and boost your career with our certification
+              program.  
+            </p>
+            <a
+              href="/certifications"
+              className="mt-6 inline-block bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg text-lg font-semibold transition duration-300"
+            >
+              Start Certification
+            </a>
+          </motion.div>
+        </div>
+      </Parallax>
+
       {/* Hero section to promote Certifications */}
-<section className="w-full bg-gray-900 py-16 text-white">
-  <motion.div
-    initial={{ opacity: 0, y: 30 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.7 }}
-    className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center"
-  >
-    {/* Image on the Left */}
-    <div className="w-full md:w-1/2 flex justify-center">
-      <img
-        src={certification}
-        alt="Get Certified"
-        className="w-3/4 md:w-full rounded-lg shadow-lg"
-      />
-    </div>
-
-    {/* Text on the Right */}
-    <div className="w-full md:w-1/2 md:pl-12 text-center md:text-left">
-      <h3 className="text-lg font-semibold uppercase text-yellow-400 mb-2">
-        Validate Your Skills, Boost Your Career
-      </h3>
-      <h2 className="text-4xl font-extrabold mb-6 text-blue-400">
-        Pass the Test & Get Certified!
-      </h2>
-      <p className="text-lg text-gray-300 font-medium leading-relaxed">
-        Want to prove your expertise? Take our certification test, pass with
-        confidence, and earn a verified certificate from our platform. Show
-        potential employers and peers that you have what it takes!
-      </p>
-      <p className="text-lg text-gray-300 font-medium leading-relaxed mt-4">
-        Your certification is more than just a document—it's a testament to your
-        dedication and knowledge. Share it on LinkedIn, include it in your
-        resume, and open doors to new opportunities.
-      </p>
-      {/* CTA Button */}
-      <div className="mt-6">
-        <a
-          href="/certifications"
-          className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg text-lg font-semibold transition duration-300"
+      <section className="w-full bg-gray-900 py-16 text-white">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7 }}
+          className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center"
         >
-          Start Your Certification Now
-        </a>
-      </div>
-    </div>
-  </motion.div>
-</section>
+          {/* Image on the Left */}
+          <div className="w-full md:w-1/2 flex justify-center">
+            <img
+              src={certification}
+              alt="Get Certified"
+              className="w-3/4 md:w-full rounded-lg shadow-lg"
+            />
+          </div>
 
+          {/* Text on the Right */}
+          <div className="w-full md:w-1/2 md:pl-12 text-center md:text-left">
+            <h3 className="text-lg font-semibold uppercase text-yellow-400 mb-2">
+              Validate Your Skills, Boost Your Career
+            </h3>
+            <h2 className="text-4xl font-extrabold mb-6 text-blue-400">
+              Pass the Test & Get Certified!
+            </h2>
+            <p className="text-lg text-gray-300 font-medium leading-relaxed">
+              Want to prove your expertise? Take our certification test, pass
+              with confidence, and earn a verified certificate from our platform.
+              Show potential employers and peers that you have what it takes!
+            </p>
+            <p className="text-lg text-gray-300 font-medium leading-relaxed mt-4">
+              Your certification is more than just a document—it's a testament
+              to your dedication and knowledge. Share it on LinkedIn, include it
+              in your resume, and open doors to new opportunities.
+            </p>
+            {/* CTA Button */}
+            <div className="mt-6">
+              <a
+                href="/certifications"
+                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg text-lg font-semibold transition duration-300"
+              >
+                Start Your Certification Now
+              </a>
+            </div>
+          </div>
+        </motion.div>
+      </section>
     </div>
   );
 };

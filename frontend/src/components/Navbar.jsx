@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import PropTypes from 'prop-types';
 import { motion, AnimatePresence } from "framer-motion";
 import { FaUserCircle, FaBars, FaTimes } from "react-icons/fa";
 
@@ -152,6 +153,10 @@ const Navbar = ({ isAuthenticated, setIsAuthenticated }) => {
       </style>
     </div>
   );
+};
+Navbar.propTypes = {
+  isAuthenticated: PropTypes.bool.isRequired,
+  setIsAuthenticated: PropTypes.func.isRequired,
 };
 
 export default Navbar;

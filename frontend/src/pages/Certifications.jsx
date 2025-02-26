@@ -4,7 +4,7 @@ import {
   submitCertificationAnswers,
 } from "../api/certification";
 import jsPDF from "jspdf";
-import Confetti from "react-confetti"; // For celebration animation
+import Confetti from "react-confetti";
 
 const Certifications = () => {
   const [questions, setQuestions] = useState([]);
@@ -18,7 +18,7 @@ const Certifications = () => {
   const [showTestDetails, setShowTestDetails] = useState(true);
   const [showAgreementDialog, setShowAgreementDialog] = useState(false);
   const [testStarted, setTestStarted] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false); // State to control confetti
 
   const questionsPerPage = 5;
 
@@ -44,6 +44,7 @@ const Certifications = () => {
     if (testStarted) {
       const handleFullScreenChange = () => {
         if (!document.fullscreenElement) {
+          // User exited full-screen mode
           handleSubmit();
         }
       };
@@ -96,39 +97,36 @@ const Certifications = () => {
 
     setResult({ ...res, passed });
 
-    if (passed) {
-      setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 5000); // Show confetti for 5 seconds
-    }
-
     localStorage.removeItem("certificationAnswers");
 
+    // Exit full-screen mode after submission
     if (document.fullscreenElement) {
       document.exitFullscreen().catch((err) => {
         console.error("Failed to exit fullscreen mode:", err);
       });
+    }
+
+    // Show confetti if passed
+    if (passed) {
+      setShowConfetti(true);
     }
   };
 
   const generateCertificate = (userName, score, totalQuestions) => {
     const doc = new jsPDF("landscape");
 
-    // 🎨 Stylish Background
     doc.setFillColor(240, 240, 240);
     doc.rect(0, 0, 297, 210, "F");
 
-    // 🖼️ Decorative Border
     doc.setDrawColor(50, 90, 160);
     doc.setLineWidth(6);
     doc.rect(10, 10, 277, 190);
 
-    // 🏆 Certificate Title
     doc.setFont("times", "bold");
     doc.setTextColor(40, 40, 40);
     doc.setFontSize(38);
     doc.text("CERTIFICATE OF ACHIEVEMENT", 148, 50, { align: "center" });
 
-    // 📜 Subtitle
     doc.setFontSize(20);
     doc.setFont("helvetica", "italic");
     doc.setTextColor(80, 80, 80);
@@ -136,30 +134,26 @@ const Certifications = () => {
       align: "center",
     });
 
-    // ✍️ Recipient Name
     doc.setFont("cursive", "bolditalic");
     doc.setFontSize(34);
     doc.setTextColor(50, 90, 160);
     doc.text(userName, 148, 100, { align: "center" });
 
-    // 🎖️ Achievement Details
     doc.setFont("helvetica", "normal");
     doc.setFontSize(18);
     doc.setTextColor(60, 60, 60);
     doc.text(
-      `For demonstrating exceptional proficiency and securing an outstanding score of ${score}/${totalQuestions} in the React Certification Exam.`,
+      `For securing an outstanding score of ${score}/${totalQuestions} in the React Certification Exam.`,
       148,
       130,
       { align: "center", maxWidth: 270 }
     );
 
-    // 📅 Issue Date
     const issueDate = new Date().toLocaleDateString();
     doc.setFontSize(16);
     doc.setTextColor(120, 120, 120);
     doc.text(`Issued on: ${issueDate}`, 148, 150, { align: "center" });
 
-    // ✍️ Signature
     doc.setDrawColor(90, 90, 90);
     doc.setLineWidth(1);
     doc.line(100, 180, 190, 180);
@@ -168,7 +162,6 @@ const Certifications = () => {
     doc.setTextColor(80, 80, 80);
     doc.text("Uni-Conn", 148, 190, { align: "center" });
 
-    // 🌊 Watermark
     doc.setTextColor(200, 200, 200);
     doc.setFontSize(55);
     doc.text("UNIVERSITY CONNECT", 148, 120, {
@@ -177,7 +170,6 @@ const Certifications = () => {
       rotate: 30,
     });
 
-    // 💾 Save as PDF
     doc.save(`${userName}_React_Certificate.pdf`);
   };
 
@@ -190,10 +182,12 @@ const Certifications = () => {
     setShowTestDetails(false);
     setTestStarted(true);
 
+    // Enter full-screen mode
     document.documentElement.requestFullscreen().catch((err) => {
       console.error("Failed to enter fullscreen mode:", err);
     });
 
+    // Disable copy-paste
     document.addEventListener("copy", (e) => e.preventDefault());
     document.addEventListener("cut", (e) => e.preventDefault());
     document.addEventListener("paste", (e) => e.preventDefault());
@@ -373,6 +367,12 @@ const Certifications = () => {
                     className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg mt-6 inline-block text-lg font-semibold"
                   >
                     🎓 Generate Certificate
+                  </button>
+                  <button
+                    onClick={() => setShowConfetti(true)}
+                    className="bg-purple-500 hover:bg-purple-600 text-white px-6 py-3 rounded-lg mt-6 ml-4 inline-block text-lg font-semibold"
+                  >
+                    🎉 Celebrate!
                   </button>
                 </>
               ) : (
