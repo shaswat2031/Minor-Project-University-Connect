@@ -2,12 +2,12 @@ import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { FaLinkedin, FaCheckCircle } from "react-icons/fa";
-import { Parallax } from "react-parallax"; // Import Parallax component
+import { Parallax } from "react-parallax";
 import team1 from "../assets/harshita.jpg";
 import team2 from "../assets/sugam.jpg";
 import team3 from "../assets/vansh.jpg";
 import Hero from "../assets/Adult.jpeg";
-import team4 from "../assets/shaswat.jpg";
+import team4 from "../assets/Shaswat.jpg";
 import certification from "../assets/Certificate.jpeg";
 import Parallaxeffect from "../assets/parallaxeffect.jpeg";
 
