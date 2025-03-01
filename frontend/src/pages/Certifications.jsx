@@ -84,7 +84,7 @@ const Certifications = () => {
 
     setScore(correctCount);
     const percentage = (correctCount / questions.length) * 100;
-    const passed = percentage >= 65;
+    const passed = percentage >= 1;
 
     const formattedAnswers = questions.map((q, index) => answers[index] || "");
 
