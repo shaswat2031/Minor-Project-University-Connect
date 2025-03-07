@@ -51,35 +51,55 @@ const Profile = () => {
   return (
     <div className="p-6">
       <h2 className="text-2xl font-bold">{editing ? "Edit Profile" : "My Profile"}</h2>
-
       {!editing ? (
         <>
           <p><strong>Name:</strong> {profile.name}</p>
           <p><strong>Skills:</strong> {profile.skills.join(", ")}</p>
           <p><strong>Bio:</strong> {profile.bio}</p>
-
-          <h3 className="font-bold mt-4">Education</h3>
-          {profile.education.map((edu, index) => (
-            <p key={index}>{edu.degree} at {edu.institution} ({edu.year})</p>
-          ))}
-
-          <h3 className="font-bold mt-4">Experience</h3>
-          {profile.experience.map((exp, index) => (
-            <p key={index}>{exp.role} at {exp.company} ({exp.duration})</p>
-          ))}
-
+          <p><strong>Education:</strong> {profile.education}</p>
+          <p><strong>LinkedIn:</strong> <a href={profile.linkedin} target="_blank" rel="noopener noreferrer">{profile.linkedin}</a></p>
+          <p><strong>Instagram:</strong> <a href={profile.instagram} target="_blank" rel="noopener noreferrer">{profile.instagram}</a></p>
           <button onClick={() => setEditing(true)} className="mt-4 px-4 py-2 bg-blue-500 text-white rounded">
             Edit Profile
           </button>
         </>
       ) : (
         <form onSubmit={handleSave} className="space-y-4">
-          <input type="text" value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} className="w-full p-2 border rounded" />
-
-          <input type="text" value={profile.skills.join(", ")} onChange={(e) => setProfile({ ...profile, skills: e.target.value.split(",") })} className="w-full p-2 border rounded" />
-
-          <textarea value={profile.bio} onChange={(e) => setProfile({ ...profile, bio: e.target.value })} className="w-full p-2 border rounded" />
-
+          <input
+            type="text"
+            value={profile.name}
+            onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+            className="w-full p-2 border rounded"
+          />
+          <input
+            type="text"
+            value={profile.skills.join(", ")}
+            onChange={(e) => setProfile({ ...profile, skills: e.target.value.split(",") })}
+            className="w-full p-2 border rounded"
+          />
+          <textarea
+            value={profile.bio}
+            onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
+            className="w-full p-2 border rounded"
+          />
+          <input
+            type="text"
+            value={profile.education}
+            onChange={(e) => setProfile({ ...profile, education: e.target.value })}
+            className="w-full p-2 border rounded"
+          />
+          <input
+            type="text"
+            value={profile.linkedin}
+            onChange={(e) => setProfile({ ...profile, linkedin: e.target.value })}
+            className="w-full p-2 border rounded"
+          />
+          <input
+            type="text"
+            value={profile.instagram}
+            onChange={(e) => setProfile({ ...profile, instagram: e.target.value })}
+            className="w-full p-2 border rounded"
+          />
           <button type="submit" className="w-full bg-green-500 text-white p-2 rounded">
             Save Profile
           </button>

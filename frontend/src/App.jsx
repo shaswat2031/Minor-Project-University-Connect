@@ -1,42 +1,47 @@
 import { useEffect, useState } from "react";
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import axios from "axios";
 import Navbar from "./components/Navbar";
+import ProtectedRoute from "./components/ProtectedRoute"; // Add this import
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import StudentConnect from "./pages/StudentConnect";
 import Certifications from "./pages/Certifications";
 import TalentMarketplace from "./pages/TalentMarketplace";
-// import ProfileSetup from "./pages/ProfileSetup";
+import ProfileSetup from "./pages/ProfileSetup";
 import Footer from "./components/Footer";
+import UserProfile from "./pages/UserProfile"; // Import the UserProfile component
+import ProfilePage from "./pages/ProfilePage"; // Import the ProfilePage component
 
 const App = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem("token"));
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    const checkAuth = () => {
-      setIsAuthenticated(!!localStorage.getItem("token"));
-    };
-
-    window.addEventListener("storage", checkAuth); // Detect token changes in localStorage
-    return () => window.removeEventListener("storage", checkAuth);
+    const token = localStorage.getItem("token");
+    setIsAuthenticated(!!token);
   }, []);
 
   return (
     <Router>
-      <Navbar isAuthenticated={isAuthenticated} setIsAuthenticated={setIsAuthenticated} />
-      <Routes>
-        <Route path="/" element={isAuthenticated ? <Home /> : <Navigate to="/login" />} />
-        <Route path="/login" element={isAuthenticated ? <Navigate to="/" /> : <Login setIsAuthenticated={setIsAuthenticated} />} />
-        <Route path="/register" element={isAuthenticated ? <Navigate to="/" /> : <Register />} />
-        <Route path="/students" element={isAuthenticated ? <StudentConnect /> : <Navigate to="/login" />} />
-        {/* <Route path="/profile-setup" element={<ProfileSetup />} /> */}
-        <Route path="/studentconnect" element={<StudentConnect />} />
-        <Route path="/certifications" element={isAuthenticated ? <Certifications /> : <Navigate to="/login" />} />
-        <Route path="/talent-marketplace" element={isAuthenticated ? <TalentMarketplace /> : <Navigate to="/login" />} />
-      </Routes>
-      <Footer/>
+      <div>
+        <Navbar 
+          isAuthenticated={isAuthenticated} 
+          setIsAuthenticated={setIsAuthenticated} 
+        />
+        <Routes>
+          <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+          <Route path="/login" element={isAuthenticated ? <Navigate to="/" /> : <Login setIsAuthenticated={setIsAuthenticated} />} />
+          <Route path="/register" element={isAuthenticated ? <Navigate to="/" /> : <Register />} />
+          <Route path="/students" element={<ProtectedRoute><StudentConnect /></ProtectedRoute>} />
+          <Route path="/profile-setup" element={<ProfileSetup />} />
+          <Route path="/profile/:id" element={<ProfilePage />} /> {/* Add this route */}
+          <Route path="/certifications" element={<ProtectedRoute><Certifications /></ProtectedRoute>} />
+          <Route path="/talent-marketplace" element={<ProtectedRoute><TalentMarketplace /></ProtectedRoute>} />
+          <Route path="/profile" element={<UserProfile />} /> {/* Add this route */}
+        </Routes>
+      </div>
     </Router>
   );
 };

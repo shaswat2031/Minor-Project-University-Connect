@@ -5,6 +5,7 @@ const Certificate = require("../models/Certificate");
 const PDFDocument = require("pdfkit");
 const fs = require("fs");
 const path = require("path");
+const authMiddleware = require('../middleware/authMiddleware');
 
 // ✅ Ensure the certificates directory exists
 const certificatesDir = path.join(__dirname, "../certificates");
@@ -18,22 +19,28 @@ router.use("/certificates", express.static(certificatesDir));
 /** 
  * ✅ Fetch 30 Random MCQs by Category 
  */
+// Update questions route to include error handling
 router.get("/questions", async (req, res) => {
   try {
     const { category } = req.query;
-    if (!category) return res.status(400).json({ error: "Category is required" });
+    if (!category) {
+      return res.status(400).json({ message: "Category is required" });
+    }
 
-    const questions = await Question.aggregate([
-      { $match: { category } },
-      { $sample: { size: 30 } },
-    ]);
+    const questions = await Question.find({ category })
+      .select('-correctAnswer') // Don't send correct answers to frontend
+      .limit(30);
 
-    if (questions.length === 0) return res.status(404).json({ error: "No questions found" });
+    if (!questions.length) {
+      // If no questions found, use mock data
+      const mockQuestions = require('./mockData');
+      return res.json(mockQuestions);
+    }
 
     res.json(questions);
   } catch (error) {
     console.error("Error fetching questions:", error);
-    res.status(500).json({ error: "Failed to fetch questions" });
+    res.status(500).json({ message: "Error fetching questions" });
   }
 });
 
@@ -48,69 +55,63 @@ router.post("/submit", async (req, res) => {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    // Fetch correct answers from DB
-    const questions = await Question.find({ category });
-    if (questions.length === 0) return res.status(404).json({ message: "No questions found" });
-
-    let correctAnswers = questions.map(q => q.correctAnswer);
-    
-    // Calculate score
+    // Fetch questions and calculate score
+    const questions = await Question.find({ category }).limit(30);
     let score = 0;
-    answers.forEach((ans, index) => {
-      if (ans === correctAnswers[index]) score++;
+    answers.forEach((answer, index) => {
+      if (questions[index] && answer === questions[index].correctAnswer) {
+        score++;
+      }
     });
 
-    const totalQuestions = correctAnswers.length;
-    const percentage = (score / totalQuestions) * 100;
+    const percentage = (score / questions.length) * 100;
     const passed = percentage >= 65;
 
+    // Generate certificate if passed
     let certificateUrl = null;
-
     if (passed) {
-      // ✅ Generate certificate
-      certificateUrl = `/certificates/${userId}-${category}.pdf`;
-      const certificatePath = path.join(certificatesDir, `${userId}-${category}.pdf`);
+      const doc = new PDFDocument({ layout: 'landscape' });
+      const fileName = `certificate-${userId}-${Date.now()}.pdf`;
+      const filePath = path.join(certificatesDir, fileName);
+      const writeStream = fs.createWriteStream(filePath);
 
-      const doc = new PDFDocument({ size: "A4", layout: "landscape" });
-      const writeStream = fs.createWriteStream(certificatePath);
       doc.pipe(writeStream);
-
-      // 🎨 Certificate Design
-      doc.fontSize(30).text("Certificate of Completion", { align: "center" });
-      doc.moveDown();
-      doc.fontSize(20).text("This is to certify that", { align: "center" });
-      doc.moveDown();
-      doc.fontSize(25).text(userName, { align: "center", underline: true });
-      doc.moveDown();
-      doc.fontSize(20).text(`Has successfully passed the ${category} Certification Test`, { align: "center" });
-      doc.moveDown();
-      doc.fontSize(15).text(`Issued on: ${new Date().toLocaleDateString()}`, { align: "center" });
+      
+      // Certificate design
+      doc.fontSize(30).text('Certificate of Completion', { align: 'center' });
+      doc.fontSize(20).text(`Awarded to: ${userName}`, { align: 'center' });
+      doc.fontSize(16).text(`Score: ${score}/${questions.length}`, { align: 'center' });
+      doc.fontSize(16).text(`Category: ${category}`, { align: 'center' });
+      doc.fontSize(14).text(`Date: ${new Date().toLocaleDateString()}`, { align: 'center' });
 
       doc.end();
 
-      await new Promise((resolve, reject) => {
-        writeStream.on("finish", resolve);
-        writeStream.on("error", reject);
-      });
+      certificateUrl = `/certificates/${fileName}`;
     }
 
-    // ✅ Save result to database
+    // Save certification record
     const certification = new Certificate({
       userId,
       userName,
       category,
       score,
-      totalQuestions,
+      totalQuestions: questions.length,
       certificateUrl,
-      passed,
+      passed
     });
 
     await certification.save();
 
-    res.json({ score, totalQuestions, passed, certificateUrl });
+    res.json({
+      score,
+      totalQuestions: questions.length,
+      percentage,
+      passed,
+      certificateUrl
+    });
   } catch (error) {
-    console.error("Error submitting test:", error);
-    res.status(500).json({ message: "Server Error", error });
+    console.error("Error submitting certification:", error);
+    res.status(500).json({ message: "Server error" });
   }
 });
 

@@ -12,13 +12,8 @@ const studentSchema = new mongoose.Schema({
       year: String,
     },
   ],
-  experience: [
-    {
-      company: String,
-      role: String,
-      duration: String,
-    },
-  ],
+  linkedin: { type: String }, // Added LinkedIn field
+  instagram: { type: String }, // Added Instagram field
 });
 
 module.exports = mongoose.model("Student", studentSchema);
