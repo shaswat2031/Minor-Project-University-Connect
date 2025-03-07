@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion } from "framer-motion";
 import Particles from "react-tsparticles";
-import { loadFull } from "tsparticles";
+import { loadSlim } from "tsparticles-slim"; // Use slim version
 import React from "react";
 
 const Login = () => {
@@ -11,29 +11,44 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
+  
     try {
       const res = await axios.post("http://localhost:5000/api/auth/login", {
         email,
         password,
       });
-
-      if (res.status === 200) {
-        localStorage.setItem("token", res.data.token);
-        navigate("/");
+  
+      console.log("Login Response:", res.data); // Debugging log
+  
+      const token = res.data.token;
+      if (!token) {
+        throw new Error("Token not received from server");
       }
+  
+      localStorage.setItem("token", token);
+      navigate("/");
+      window.location.reload();
     } catch (err) {
+      console.error("Login Error:", err);
       setError(err.response?.data?.message || "Login failed");
     }
   };
-
   // Particle Background Settings
   const particlesInit = useCallback(async (engine) => {
-    await loadFull(engine);
+    try {
+      console.log("Initializing tsparticles engine..."); // Corrected syntax
+      if (engine && typeof engine.addShape === "function") {
+        await loadFull(engine); // Ensure compatibility with the latest version
+      }
+    } catch (error) {
+      console.error("Error initializing tsparticles engine:", error);
+    }
+  });
+  const particlesLoaded = useCallback((container) => {
+    console.log("Particles loaded:", container);
   }, []);
 
   const particleOptions = {

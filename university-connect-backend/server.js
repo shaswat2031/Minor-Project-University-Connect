@@ -16,6 +16,7 @@ const certificatesDir = path.join(__dirname, "certificates");
 if (!fs.existsSync(certificatesDir)) {
   fs.mkdirSync(certificatesDir);
 }
+console.log("JWT_SECRET:", process.env.JWT_SECRET); // Debugging log
 
 // ✅ Import Routes
 const authRoutes = require("./routes/authRoutes");
@@ -24,14 +25,16 @@ const studentRoutes = require("./routes/studentRoutes");
 const serviceRoutes = require("./routes/serviceRoutes");
 const certificationRoutes = require("./routes/certificationRoutes");
 const questionRoutes = require("./routes/questionRoutes"); // ✅ Question Routes
+const talentMarketplaceRoutes = require("./routes/talentMarketplace");
 
 // ✅ Use Routes
 app.use("/api/auth", authRoutes);
-app.use("/api/profile", profileRoutes);
+app.use("/api/users", profileRoutes); // Maps /api/users to profileRoutes
 app.use("/api/students", studentRoutes);
 app.use("/api/services", serviceRoutes);
 app.use("/api/certification", certificationRoutes);
 app.use("/api/questions", questionRoutes); // ✅ FIXED route for fetching questions
+app.use("/api/talent-marketplace", talentMarketplaceRoutes);
 
 // ✅ Serve Certificates Publicly
 app.use("/certificates", express.static(certificatesDir));
@@ -40,8 +43,6 @@ app.use("/certificates", express.static(certificatesDir));
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
     });
     console.log("✅ MongoDB Connected");
   } catch (err) {

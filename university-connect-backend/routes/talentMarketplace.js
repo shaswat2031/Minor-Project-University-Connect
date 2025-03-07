@@ -76,13 +76,18 @@ router.delete("/delete/:id", authMiddleware, async (req, res) => {
   try {
     const service = await Service.findById(req.params.id);
 
-    if (!service || service.user.toString() !== req.user.id) {
+    if (!service) {
+      return res.status(404).json({ message: "Service not found" });
+    }
+
+    if (service.user.toString() !== req.user.id) {
       return res.status(403).json({ message: "Unauthorized" });
     }
 
-    await service.remove();
+    await Service.findByIdAndDelete(req.params.id); // Changed from service.remove()
     res.json({ message: "Service deleted successfully!" });
   } catch (error) {
+    console.error("Error deleting service:", error);
     res.status(500).json({ error: "Server error" });
   }
 });

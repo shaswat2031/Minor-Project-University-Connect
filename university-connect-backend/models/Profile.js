@@ -3,25 +3,17 @@ const mongoose = require("mongoose");
 const ProfileSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   name: { type: String, required: true },
-  bio: { type: String },
-  skills: { type: [String] },
+  bio: { type: String, required: true },
+  skills: { type: [String], required: true },
+  linkedin: { type: String },
+  instagram: { type: String },
   education: [
     {
-      degree: String,
-      institution: String,
-      year: String,
+      degree: { type: String },
+      institution: { type: String },
+      year: { type: String },
     },
-  ],
-  experience: [
-    {
-      role: String,
-      company: String,
-      duration: String,
-    },
-  ],
+  ], // Updated education to be an array of objects
 });
 
-// Prevent model overwrite
-const Profile = mongoose.models.Profile || mongoose.model("Profile", ProfileSchema);
-
-module.exports = Profile;
+module.exports = mongoose.model("Profile", ProfileSchema);

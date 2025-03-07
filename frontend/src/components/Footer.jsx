@@ -10,7 +10,6 @@ const Footer = () => {
         transition={{ duration: 0.8, ease: "easeOut" }}
         className="max-w-6xl mx-auto px-4 flex flex-col items-center text-center space-y-3"
       >
-        {/* Branding & Tagline with Unique Font Styling */}
         <motion.h2
           whileHover={{ scale: 1.1, color: "#60A5FA" }}
           transition={{ duration: 0.3 }}
@@ -25,8 +24,6 @@ const Footer = () => {
         >
           Bridging Students & Opportunities
         </motion.p>
-
-        {/* Copyright with Subtle Animation */}
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
