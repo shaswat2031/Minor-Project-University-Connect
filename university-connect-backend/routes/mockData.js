@@ -25,6 +25,28 @@ const mockMCQs = [
       correctAnswer: "None",
     },
   ];
-  
-  module.exports = mockMCQs;
+  mockMCQs.push({
+    question: "What is React?",
+    options: [
+      "A JavaScript library for building user interfaces",
+      "A programming language",
+      "A database management system",
+      "An operating system"
+    ],
+    correctAnswer: "A JavaScript library for building user interfaces"
+  },
+  {
+    question: "What is JSX?",
+    options: [
+      "JavaScript XML",
+      "Java Syntax Extension",
+      "JavaScript Extension",
+      "Java XML"
+    ],
+    correctAnswer: "JavaScript XML"
+  },
+  // Add more React questions here
+);
+
+module.exports = mockMCQs;
     

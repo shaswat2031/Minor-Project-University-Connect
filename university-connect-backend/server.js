@@ -8,6 +8,13 @@ const fs = require("fs");
 dotenv.config();
 
 const app = express();
+// Update CORS configuration
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  credentials: true
+}));
+
+// Move this before route definitions
 app.use(express.json());
 app.use(cors());
 
@@ -32,8 +39,17 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", profileRoutes); // Maps /api/users to profileRoutes
 app.use("/api/students", studentRoutes);
 app.use("/api/services", serviceRoutes);
+// Update route mapping
 app.use("/api/certification", certificationRoutes);
-app.use("/api/questions", questionRoutes); // ✅ FIXED route for fetching questions
+app.use("/api/questions", questionRoutes);
+
+// Add CORS configuration
+app.use(cors({
+  origin: ['http://localhost:5173', 'https://minor-project-university-connect-h83y.vercel.app'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use("/api/talent-marketplace", talentMarketplaceRoutes);
 
 // ✅ Serve Certificates Publicly

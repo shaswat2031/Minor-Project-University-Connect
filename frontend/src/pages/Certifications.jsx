@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import {
   fetchCertificationQuestions,
   submitCertificationAnswers,
+  fetchUserProfile,
 } from "../api/certification";
 import jsPDF from "jspdf";
 import Confetti from "react-confetti";
@@ -21,16 +22,24 @@ const Certifications = () => {
   const [showConfetti, setShowConfetti] = useState(false); // State to control confetti
 
   const questionsPerPage = 5;
-
   useEffect(() => {
-    fetchCertificationQuestions()
-      .then((data) => {
-        setQuestions(data);
+    const fetchQuestions = async () => {
+      try {
+        setLoading(true);
+        const data = await fetchCertificationQuestions();
+        if (data && data.length > 0) {
+          setQuestions(data);
+        } else {
+          console.warn("No questions available");
+        }
+      } catch (error) {
+        console.error("Error:", error);
+      } finally {
         setLoading(false);
-      })
-      .catch(console.error);
+      }
+    };
+  fetchQuestions();
   }, []);
-
   useEffect(() => {
     if (timer > 0 && !submitted && testStarted) {
       const interval = setInterval(() => setTimer((prev) => prev - 1), 1000);
@@ -60,16 +69,24 @@ const Certifications = () => {
   const handleAnswer = (index, answer) => {
     setAnswers((prev) => ({ ...prev, [index]: answer }));
   };
-
   const handleSubmit = async () => {
-    const userId = localStorage.getItem("userId");
-    const userName = localStorage.getItem("userName");
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        window.location.href = '/login';
+        return;
+      }
 
-    if (!userId || !userName) {
-      alert("Please log in first!");
-      return;
-    }
+      let userId = localStorage.getItem("userId");
+      let userName = localStorage.getItem("userName");
 
+      if (!userId || !userName) {
+        const userProfile = await fetchUserProfile();
+        userId = userProfile._id;
+        userName = userProfile.name;
+        localStorage.setItem("userId", userId);
+        localStorage.setItem("userName", userName);
+      }
     if (Object.keys(answers).length < questions.length) {
       alert("Please answer all questions before submitting!");
       return;
@@ -99,18 +116,19 @@ const Certifications = () => {
 
     localStorage.removeItem("certificationAnswers");
 
-    // Exit full-screen mode after submission
     if (document.fullscreenElement) {
       document.exitFullscreen().catch((err) => {
         console.error("Failed to exit fullscreen mode:", err);
       });
     }
 
-    // Show confetti if passed
     if (passed) {
       setShowConfetti(true);
     }
-  };
+  } catch (error) {
+    console.error("Error submitting answers:", error);
+    alert("An error occurred while submitting your answers. Please try again.");
+  }
 
   const generateCertificate = (userName, score, totalQuestions) => {
     const doc = new jsPDF("landscape");
@@ -386,6 +404,6 @@ const Certifications = () => {
       )}
     </div>
   );
-};
-
+}}
+;
 export default Certifications;
