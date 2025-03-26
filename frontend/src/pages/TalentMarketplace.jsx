@@ -100,38 +100,40 @@ const TalentMarketplace = () => {
   }
   };
   return (
-    <div className="min-h-screen bg-[#111827] text-white p-8">
-      <h1 className="text-5xl font-extrabold text-center mb-8 text-blue-400 tracking-wide">🎭 Talent Marketplace</h1>
-  {/* Toggle Button for Form */}
-      <div className="flex justify-center mb-8">
+    <div className="min-h-screen bg-gradient-to-b from-[#0F172A] to-[#111827] text-white p-4 md:p-8">
+      <h1 className="text-5xl font-extrabold text-center mb-10 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500 tracking-wide">🎭 Talent Marketplace</h1>
+      
+      {/* Toggle Button for Form */}
+      <div className="flex justify-center mb-10">
         <button
           onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transform hover:scale-105 transition duration-300 shadow-lg"
         >
-          {showForm ? <FaMinus /> : <FaPlus />}
+          {showForm ? <FaMinus className="animate-pulse" /> : <FaPlus className="animate-pulse" />}
           {showForm ? "Hide Form" : "Add Your Talent"}
         </button>
       </div>
-  {/* Service Form */}
+      
+      {/* Service Form */}
       {showForm && (
-        <div className="max-w-2xl mx-auto bg-[#1F2937] shadow-xl rounded-xl p-8 mb-12 animate-fade-in">
-          <h2 className="text-3xl font-semibold text-white text-center mb-6">
-            {isEditing ? "Edit Service ✍️" : "Add Your Talent 🚀"}
+        <div className="max-w-2xl mx-auto bg-gradient-to-br from-[#1F2937] to-[#2D3748] shadow-2xl rounded-xl p-8 mb-12 border border-gray-700 animate-fadeIn">
+          <h2 className="text-3xl font-semibold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-indigo-400">
+            {isEditing ? "✨ Edit Service ✍️" : "✨ Add Your Talent 🚀"}
           </h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <input
               type="text"
               placeholder="Title"
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
-              className="w-full p-4 bg-[#374151] rounded-lg border border-gray-600 text-white focus:ring-2 focus:ring-blue-500"
+              className="w-full p-4 bg-[#374151] rounded-lg border border-gray-600 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-300"
               required
             />
             <textarea
               placeholder="Description"
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
-              className="w-full p-4 bg-[#374151] rounded-lg border border-gray-600 text-white focus:ring-2 focus:ring-blue-500"
+              className="w-full p-4 bg-[#374151] rounded-lg border border-gray-600 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-300 min-h-[120px]"
               required
             />
             <input
@@ -139,7 +141,7 @@ const TalentMarketplace = () => {
               placeholder="Skills (comma separated)"
               value={form.skills}
               onChange={(e) => setForm({ ...form, skills: e.target.value })}
-              className="w-full p-4 bg-[#374151] rounded-lg border border-gray-600 text-white focus:ring-2 focus:ring-blue-500"
+              className="w-full p-4 bg-[#374151] rounded-lg border border-gray-600 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-300"
               required
             />
             <input
@@ -147,7 +149,7 @@ const TalentMarketplace = () => {
               placeholder="Price ($)"
               value={form.price}
               onChange={(e) => setForm({ ...form, price: e.target.value })}
-              className="w-full p-4 bg-[#374151] rounded-lg border border-gray-600 text-white focus:ring-2 focus:ring-blue-500"
+              className="w-full p-4 bg-[#374151] rounded-lg border border-gray-600 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-300"
               required
             />
             <input
@@ -155,86 +157,102 @@ const TalentMarketplace = () => {
               placeholder="WhatsApp Number"
               value={form.whatsapp}
               onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
-              className="w-full p-4 bg-[#374151] rounded-lg border border-gray-600 text-white"
+              className="w-full p-4 bg-[#374151] rounded-lg border border-gray-600 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-300"
             />
-            {error && <p className="text-red-500 text-sm">{error}</p>}
+            {error && <p className="text-red-400 text-sm bg-red-900/30 p-3 rounded-lg border border-red-800">{error}</p>}
             <button
               type="submit"
-              className="w-full py-4 bg-gradient-to-r from-blue-500 to-blue-700 text-white font-bold text-lg rounded-lg hover:opacity-90 transition"
+              className="w-full py-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold text-lg rounded-lg hover:from-blue-600 hover:to-indigo-700 transform hover:scale-[1.02] transition duration-300 shadow-lg"
             >
-              {isEditing ? "Update Service" : "Add Service"}
+              {isEditing ? "✅ Update Service" : "✅ Add Service"}
             </button>
           </form>
         </div>
       )}
-  {/* Display Services */}
-      <h2 className="text-4xl font-bold text-center text-blue-400 mt-12">📌 Available Talents</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
-        {services.map((service) => (
-          <div
-            key={service._id}
-            className="bg-[#1F2937] p-6 rounded-xl shadow-lg border border-gray-700 hover:shadow-2xl transition transform hover:-translate-y-2"
-          >
-            <h3 className="text-2xl font-bold text-blue-400">{service.title}</h3>
-            <p className="text-gray-300 mt-2">{service.description}</p>
-            <div className="mt-4 space-y-3">
-              <p className="flex items-center gap-2">
-                <span className="text-yellow-400">💡</span>
-                <strong>Skills:</strong> {service.skills}
-              </p>
-              <p className="flex items-center gap-2">
-                <span className="text-green-400">💰</span>
-                <strong>Price:</strong> ${service.price}
-              </p>
-            </div>
-            {/* In the services display section, conditionally render Instagram button */}
-            <div className="mt-6 space-y-3">
-              {/* WhatsApp Button */}
-              <a
-                href={`https://wa.me/${service.whatsapp}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 bg-green-500 text-white px-5 py-3 rounded-full hover:bg-green-600 transition"
-              >
-                <FaWhatsapp className="text-xl" />
-                Chat on WhatsApp
-              </a>
-              {/* Only show Instagram button if instagram exists */}
-              {service.instagram && (
+      
+      {/* Display Services */}
+      <h2 className="text-4xl font-bold text-center bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500 mt-12 mb-8">📌 Available Talents</h2>
+      
+      {services.length === 0 ? (
+        <div className="text-center text-gray-400 py-12">
+          <p className="text-2xl mb-4">No talents available yet</p>
+          <p>Be the first to showcase your talent!</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
+          {services.map((service) => (
+            <div
+              key={service._id}
+              className="bg-gradient-to-br from-[#1F2937] to-[#2D3748] p-6 rounded-xl shadow-lg border border-gray-700 hover:shadow-2xl transition transform hover:-translate-y-2 duration-300 relative overflow-hidden group"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              
+              <h3 className="text-2xl font-bold text-blue-400 mb-3">{service.title}</h3>
+              <p className="text-gray-300 mt-2 leading-relaxed">{service.description}</p>
+              
+              <div className="mt-5 space-y-3">
+                <p className="flex items-center gap-2 bg-[#374151]/50 p-2 rounded-lg">
+                  <span className="text-yellow-400 text-xl">💡</span>
+                  <span className="font-semibold text-gray-200">Skills:</span> 
+                  <span className="text-gray-300">{service.skills}</span>
+                </p>
+                <p className="flex items-center gap-2 bg-[#374151]/50 p-2 rounded-lg">
+                  <span className="text-green-400 text-xl">💰</span>
+                  <span className="font-semibold text-gray-200">Price:</span> 
+                  <span className="text-gray-300">${service.price}</span>
+                </p>
+              </div>
+              
+              <div className="mt-6 space-y-3">
+                {/* WhatsApp Button */}
                 <a
-                  href={`https://instagram.com/${service.instagram}`}
+                  href={`https://wa.me/${service.whatsapp}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 bg-[#E1306C] text-white px-5 py-3 rounded-full hover:bg-[#C13584] transition"
+                  className="flex items-center justify-center gap-2 bg-gradient-to-r from-green-500 to-green-600 text-white px-5 py-3 rounded-lg hover:from-green-600 hover:to-green-700 transition duration-300 transform hover:scale-[1.02] shadow-md"
                 >
-                  <FaInstagram className="text-xl" />
-                  View on Instagram
+                  <FaWhatsapp className="text-xl" />
+                  Chat on WhatsApp
                 </a>
-              )}
-            </div>
-            {/* In the service card, update the buttons section */}
-            <div className="mt-6 space-y-3">
-              {/* ... WhatsApp and Instagram buttons ... */}
-            </div>
-            {service.user && currentUserId && service.user._id === currentUserId && (
-              <div className="mt-6 flex gap-3">
-                <button
-                  onClick={() => setIsEditing(true) & setEditId(service._id) & setForm(service) & setShowForm(true)}
-                  className="w-full flex items-center justify-center gap-2 bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition"
-                >
-                  <FaEdit /> Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(service._id)}
-                  className="w-full flex items-center justify-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
-                >
-                  <FaTrash /> Delete
-                </button>
+                
+                {/* Only show Instagram button if instagram exists */}
+                {service.instagram && (
+                  <a
+                    href={`https://instagram.com/${service.instagram}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-[#E1306C] to-[#C13584] text-white px-5 py-3 rounded-lg hover:from-[#C13584] hover:to-[#8A3AB9] transition duration-300 transform hover:scale-[1.02] shadow-md"
+                  >
+                    <FaInstagram className="text-xl" />
+                    View on Instagram
+                  </a>
+                )}
               </div>
-            )}
-          </div>
-        ))}
-      </div>
+              
+              {service.user && currentUserId && service.user._id === currentUserId && (
+                <div className="mt-6 flex gap-3">
+                  <button
+                    onClick={() => setIsEditing(true) & setEditId(service._id) & setForm(service) & setShowForm(true)}
+                    className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-500 to-amber-600 text-white px-4 py-2 rounded-lg hover:from-yellow-600 hover:to-amber-700 transition duration-300 transform hover:scale-[1.02] shadow-md"
+                  >
+                    <FaEdit /> Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(service._id)}
+                    className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-2 rounded-lg hover:from-red-600 hover:to-red-700 transition duration-300 transform hover:scale-[1.02] shadow-md"
+                  >
+                    <FaTrash /> Delete
+                  </button>
+                </div>
+              )}
+              
+              <div className="mt-4 text-xs text-gray-500 text-right">
+                {service.user && service.user.name && `Posted by: ${service.user.name}`}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
