@@ -57,8 +57,8 @@ const Privacy = () => {
         >
           <motion.div variants={itemVariants} className="bg-gray-800/50 rounded-xl p-6 md:p-8 shadow-lg border border-gray-700/50">
             <h2 className="text-2xl font-bold text-white mb-4">Introduction</h2>
-            <p className="mb-4">
-              University Connect ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how your personal information is collected, used, and disclosed by University Connect.
+              <p className="mb-4">
+              University Connect (&ldquo;we,&rdquo; &ldquo;our,&rdquo; or &ldquo;us&rdquo;) is committed to protecting your privacy. This Privacy Policy explains how your personal information is collected, used, and disclosed by University Connect.
             </p>
             <p>
               This Privacy Policy applies to our website, mobile applications, and other online services (collectively, our "Services"), including when you interact with us through our Services, receive our communications, or attend our events.

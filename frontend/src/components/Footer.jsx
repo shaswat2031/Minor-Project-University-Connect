@@ -65,7 +65,7 @@ const Footer = () => {
               <div className="flex items-center space-x-2">
                 <FaEnvelope className="text-blue-400 flex-shrink-0" />
                 <a href="mailto:info@universityconnect.edu" className="text-gray-400 hover:text-blue-400 transition-colors text-sm">
-                  info@universityconnect.edu
+                2203051050530@paruluniversity.ac.in
                 </a>
               </div>
               
@@ -87,7 +87,7 @@ const Footer = () => {
             © {new Date().getFullYear()} University Connect. All rights reserved.
           </motion.p>
           <div className="flex space-x-5 text-gray-500">
-            <Link to="/privacy" className="hover:text-blue-400 transition-colors text-sm">/Privacy</Link>
+            <Link to="/privacy" className="hover:text-blue-400 transition-colors text-sm">Privacy</Link>
             
           </div>
         </div>
