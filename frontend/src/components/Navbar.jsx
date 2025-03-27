@@ -19,6 +19,7 @@ const Navbar = ({ isAuthenticated, setIsAuthenticated }) => {
   return (
     <div className="relative w-full">
       {/* Navbar */}
+      
       <motion.nav
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -27,7 +28,16 @@ const Navbar = ({ isAuthenticated, setIsAuthenticated }) => {
       >
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 text-3xl font-extrabold text-white tracking-wide">
-          <FaGraduationCap className="text-[#00fffc] text-4xl" />
+          <motion.img 
+            src="https://img.icons8.com/fluency/48/000000/graduation-cap.png"
+            alt="University Connect Logo"
+            className="h-10 w-10"
+            whileHover={{ 
+              scale: 1.1,
+              filter: "drop-shadow(0px 0px 8px rgba(0, 255, 252, 0.8))",
+              transition: { duration: 0.3, type: "spring", stiffness: 300 }
+            }}
+          />
           <motion.span
             whileHover={{ 
               scale: 1.05, 

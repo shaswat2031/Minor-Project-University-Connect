@@ -22,7 +22,7 @@ const Home = () => {
   return (
     <div className="flex flex-col font-[Poppins]">
       {/* Hero Section */}
-      <section className="flex flex-col md:flex-row items-center justify-between bg-gradient-to-r from-gray-900 to-blue-900 p-8 md:p-12 text-white shadow-2xl rounded-lg">
+      <section className="flex flex-col md:flex-row items-center justify-between bg-gradient-to-r from-gray-900 to-blue-900 p-8 md:p-12 text-white shadow-2xl ">
         <motion.div
           className="md:w-1/2 p-4 md:p-5 text-center md:text-left"
           initial={{ opacity: 0, x: -50 }}
