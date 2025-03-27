@@ -1,10 +1,10 @@
-import React from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { 
   FaEnvelope, 
   FaArrowUp
 } from "react-icons/fa";
+import React from "react";
 
 const Footer = () => {
   const scrollToTop = () => {
@@ -42,7 +42,7 @@ const Footer = () => {
               <motion.h2
                 whileHover={{ scale: 1.05, color: "#60A5FA" }}
                 transition={{ duration: 0.3 }}
-                className="text-white text-3xl font-extrabold tracking-wide cursor-pointer bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent"
+                className="text-3xl font-extrabold tracking-wide cursor-pointer bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent"
               >
                 University Connect
               </motion.h2>

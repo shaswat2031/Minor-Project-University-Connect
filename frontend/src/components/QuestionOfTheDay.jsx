@@ -74,6 +74,7 @@ const QuestionOfTheDay = () => {
       )}
 
       {message && <p className="mt-4 text-yellow-300">{message}</p>}
+      {streak > 0 && <p className="mt-2 text-green-400">Current streak: {streak}</p>}
 
       <h3 className="mt-6 text-2xl">Leaderboard</h3>
       <ul className="mt-2">

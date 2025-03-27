@@ -212,13 +212,7 @@ const Home = () => {
                       >
                         <FaLinkedin className="text-lg" />
                       </a>
-                      <a
-                        href="#"
-                        className="bg-gray-700 p-2 rounded-full text-white hover:bg-gray-600 transition-colors"
-                        aria-label={`Email ${member.name}`}
-                      >
-                        <FaEnvelope className="text-lg" />
-                      </a>
+                      
                     </div>
                   </div>
                 </div>

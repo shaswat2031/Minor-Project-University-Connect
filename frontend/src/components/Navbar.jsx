@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import PropTypes from 'prop-types';
 import { motion, AnimatePresence } from "framer-motion";
-import { FaUserCircle, FaBars, FaTimes, FaGraduationCap } from "react-icons/fa";
+import { FaUserCircle, FaBars, FaTimes } from "react-icons/fa";
 import React from "react";
 
 const Navbar = ({ isAuthenticated, setIsAuthenticated }) => {
@@ -19,7 +19,6 @@ const Navbar = ({ isAuthenticated, setIsAuthenticated }) => {
   return (
     <div className="relative w-full">
       {/* Navbar */}
-      
       <motion.nav
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -54,17 +53,17 @@ const Navbar = ({ isAuthenticated, setIsAuthenticated }) => {
         <div className="hidden md:flex gap-6 items-center">
           {isAuthenticated ? (
             <>
-              <Link to="/students" className="nav-link group">
-                <span className="nav-text">Student Connect</span>
-                <span className="nav-underline"></span>
+              <Link to="/students" className="relative font-bold text-white py-2 px-1 overflow-hidden group">
+                <span className="relative z-10 group-hover:text-[#00fffc] transition-colors duration-300">Student Connect</span>
+                <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-gradient-to-r from-[#00fffc] to-[#00bfff] group-hover:w-full transition-all duration-300"></span>
               </Link>
-              <Link to="/certifications" className="nav-link group">
-                <span className="nav-text">Certifications</span>
-                <span className="nav-underline"></span>
+              <Link to="/certifications" className="relative font-bold text-white py-2 px-1 overflow-hidden group">
+                <span className="relative z-10 group-hover:text-[#00fffc] transition-colors duration-300">Certifications</span>
+                <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-gradient-to-r from-[#00fffc] to-[#00bfff] group-hover:w-full transition-all duration-300"></span>
               </Link>
-              <Link to="/talent-marketplace" className="nav-link group">
-                <span className="nav-text">Talent Marketplace</span>
-                <span className="nav-underline"></span>
+              <Link to="/talent-marketplace" className="relative font-bold text-white py-2 px-1 overflow-hidden group">
+                <span className="relative z-10 group-hover:text-[#00fffc] transition-colors duration-300">Talent Marketplace</span>
+                <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-gradient-to-r from-[#00fffc] to-[#00bfff] group-hover:w-full transition-all duration-300"></span>
               </Link>
 
               {/* Profile Dropdown */}
@@ -76,7 +75,7 @@ const Navbar = ({ isAuthenticated, setIsAuthenticated }) => {
                     boxShadow: "0px 0px 12px rgba(0, 255, 252, 0.6)"
                   }}
                   whileTap={{ scale: 0.98 }}
-                  transition={{ duration: 0.2 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
                   className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#131a2b] to-[#1e293b] border border-[#00fffc]/70 text-white font-bold rounded-full shadow-md hover:shadow-[#00fffc]/40 transition-all duration-300"
                 >
                   <FaUserCircle size={22} className="text-[#00fffc]" /> 
@@ -94,18 +93,28 @@ const Navbar = ({ isAuthenticated, setIsAuthenticated }) => {
                     >
                       <Link
                         to="/profile"
-                        className="dropdown-item group"
+                        className="relative block py-3.5 px-4.5 font-semibold text-white overflow-hidden group"
                         onClick={() => setDropdownOpen(false)}
                       >
                         <span className="relative z-10">My Profile</span>
-                        <span className="dropdown-item-bg"></span>
+                        <motion.span 
+                          initial={{ x: "-100%" }}
+                          whileHover={{ x: 0 }}
+                          transition={{ type: "tween", ease: "easeOut", duration: 0.3 }}
+                          className="absolute inset-0 bg-[#00fffc]/10"
+                        />
                       </Link>
                       <button 
                         onClick={handleLogout} 
-                        className="dropdown-item group w-full text-left"
+                        className="relative block w-full text-left py-3.5 px-4.5 font-semibold text-red-400 group-hover:text-white overflow-hidden group"
                       >
-                        <span className="relative z-10 text-red-400 group-hover:text-white">Logout</span>
-                        <span className="dropdown-item-bg bg-red-500/10 group-hover:bg-red-500/30"></span>
+                        <span className="relative z-10 group-hover:text-white transition-colors duration-300">Logout</span>
+                        <motion.span 
+                          initial={{ x: "-100%" }}
+                          whileHover={{ x: 0 }}
+                          transition={{ type: "tween", ease: "easeOut", duration: 0.3 }}
+                          className="absolute inset-0 bg-red-500/30"
+                        />
                       </button>
                     </motion.div>
                   )}
@@ -114,17 +123,18 @@ const Navbar = ({ isAuthenticated, setIsAuthenticated }) => {
             </>
           ) : (
             <>
-              <Link to="/login" className="nav-link group">
-                <span className="nav-text">Login</span>
-                <span className="nav-underline"></span>
+              <Link to="/login" className="relative font-bold text-white py-2 px-1 overflow-hidden group">
+                <span className="relative z-10 group-hover:text-[#00fffc] transition-colors duration-300">Login</span>
+                <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-gradient-to-r from-[#00fffc] to-[#00bfff] group-hover:w-full transition-all duration-300"></span>
               </Link>
               <Link to="/register">
                 <motion.button
                   whileHover={{ 
                     scale: 1.05, 
-                    boxShadow: "0px 0px 12px rgba(0, 255, 252, 0.6)"
+                    boxShadow: "0px 0px 15px rgba(0, 255, 252, 0.7)"
                   }}
                   whileTap={{ scale: 0.98 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
                   className="px-6 py-2.5 bg-gradient-to-r from-[#00fffc] to-[#00bfff] text-[#0a0f1d] font-bold rounded-full shadow-md hover:shadow-[#00fffc]/60 transition-all duration-300"
                 >
                   Register
@@ -158,17 +168,35 @@ const Navbar = ({ isAuthenticated, setIsAuthenticated }) => {
             <div className="flex flex-col items-center gap-5 py-8 px-6">
               {isAuthenticated ? (
                 <>
-                  <Link to="/profile" className="mobile-nav-link">
-                    <FaUserCircle size={18} className="text-[#00fffc]" />
-                    <span>My Profile</span>
-                  </Link>
-                  <Link to="/students" className="mobile-nav-link">Student Connect</Link>
-                  <Link to="/certifications" className="mobile-nav-link">Certifications</Link>
-                  <Link to="/talent-marketplace" className="mobile-nav-link">Talent Marketplace</Link>
+                  <motion.div className="w-full" whileHover={{ y: -2 }}>
+                    <Link to="/profile" className="flex items-center gap-2 w-full text-center text-white font-bold py-3 px-5 rounded-xl bg-white/5 hover:bg-[#00fffc]/10 hover:shadow-md hover:shadow-[#00fffc]/20 transition-all duration-300">
+                      <FaUserCircle size={18} className="text-[#00fffc]" />
+                      <span>My Profile</span>
+                    </Link>
+                  </motion.div>
+                  
+                  <motion.div className="w-full" whileHover={{ y: -2 }}>
+                    <Link to="/students" className="flex w-full justify-center text-white font-bold py-3 px-5 rounded-xl bg-white/5 hover:bg-[#00fffc]/10 hover:shadow-md hover:shadow-[#00fffc]/20 transition-all duration-300">
+                      Student Connect
+                    </Link>
+                  </motion.div>
+                  
+                  <motion.div className="w-full" whileHover={{ y: -2 }}>
+                    <Link to="/certifications" className="flex w-full justify-center text-white font-bold py-3 px-5 rounded-xl bg-white/5 hover:bg-[#00fffc]/10 hover:shadow-md hover:shadow-[#00fffc]/20 transition-all duration-300">
+                      Certifications
+                    </Link>
+                  </motion.div>
+                  
+                  <motion.div className="w-full" whileHover={{ y: -2 }}>
+                    <Link to="/talent-marketplace" className="flex w-full justify-center text-white font-bold py-3 px-5 rounded-xl bg-white/5 hover:bg-[#00fffc]/10 hover:shadow-md hover:shadow-[#00fffc]/20 transition-all duration-300">
+                      Talent Marketplace
+                    </Link>
+                  </motion.div>
+                  
                   <motion.button 
                     onClick={handleLogout} 
                     className="mt-4 px-8 py-2.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 font-bold rounded-full border border-red-500/40 transition-all"
-                    whileHover={{ scale: 1.05 }}
+                    whileHover={{ scale: 1.05, y: -2, boxShadow: "0px 4px 12px rgba(239, 68, 68, 0.2)" }}
                     whileTap={{ scale: 0.98 }}
                   >
                     Logout
@@ -176,12 +204,17 @@ const Navbar = ({ isAuthenticated, setIsAuthenticated }) => {
                 </>
               ) : (
                 <>
-                  <Link to="/login" className="mobile-nav-link">Login</Link>
-                  <Link to="/register">
+                  <motion.div className="w-full" whileHover={{ y: -2 }}>
+                    <Link to="/login" className="flex w-full justify-center text-white font-bold py-3 px-5 rounded-xl bg-white/5 hover:bg-[#00fffc]/10 hover:shadow-md hover:shadow-[#00fffc]/20 transition-all duration-300">
+                      Login
+                    </Link>
+                  </motion.div>
+                  
+                  <Link to="/register" className="w-full">
                     <motion.button
-                      whileHover={{ scale: 1.05 }}
+                      whileHover={{ scale: 1.05, boxShadow: "0px 0px 15px rgba(0, 255, 252, 0.5)" }}
                       whileTap={{ scale: 0.98 }}
-                      className="px-8 py-2.5 bg-gradient-to-r from-[#00fffc] to-[#00bfff] text-[#0a0f1d] font-bold rounded-full shadow-md"
+                      className="w-full px-8 py-3 bg-gradient-to-r from-[#00fffc] to-[#00bfff] text-[#0a0f1d] font-bold rounded-full shadow-md"
                     >
                       Register
                     </motion.button>
@@ -192,89 +225,6 @@ const Navbar = ({ isAuthenticated, setIsAuthenticated }) => {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Styles */}
-      <style>
-        {`
-          .nav-link {
-            position: relative;
-            color: white;
-            font-weight: bold;
-            padding: 8px 4px;
-            overflow: hidden;
-          }
-          
-          .nav-text {
-            position: relative;
-            z-index: 10;
-            transition: all 0.3s ease;
-          }
-          
-          .nav-underline {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            height: 2px;
-            width: 0;
-            background: linear-gradient(to right, #00fffc, #00bfff);
-            transition: width 0.3s ease;
-          }
-          
-          .nav-link:hover .nav-text {
-            color: #00fffc;
-          }
-          
-          .nav-link:hover .nav-underline,
-          .group:hover .nav-underline {
-            width: 100%;
-          }
-
-          .dropdown-item {
-            position: relative;
-            display: block;
-            padding: 14px 18px;
-            font-weight: 600;
-            color: white;
-            overflow: hidden;
-          }
-          
-          .dropdown-item-bg {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 255, 252, 0.1);
-            transform: translateX(-100%);
-            transition: transform 0.3s ease;
-          }
-          
-          .dropdown-item:hover .dropdown-item-bg,
-          .group:hover .dropdown-item-bg {
-            transform: translateX(0);
-          }
-          
-          .mobile-nav-link {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            width: 100%;
-            text-align: center;
-            color: white;
-            font-weight: bold;
-            padding: 12px 20px;
-            border-radius: 10px;
-            background-color: rgba(255, 255, 255, 0.05);
-            transition: all 0.3s ease;
-          }
-          
-          .mobile-nav-link:hover {
-            background-color: rgba(0, 255, 252, 0.1);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 255, 252, 0.2);
-          }
-        `}
-      </style>
     </div>
   );
 };
