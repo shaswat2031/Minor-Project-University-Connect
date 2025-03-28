@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { FaLinkedin, FaEnvelope, FaArrowRight } from "react-icons/fa";
+import { FaLinkedin,  FaArrowRight } from "react-icons/fa";
 import { Parallax } from "react-parallax";
 import team1 from "../assets/harshita.jpg";
 import team2 from "../assets/sugam.jpg";
@@ -319,7 +319,8 @@ const Home = () => {
         </div>
         
         {/* CSS for text shadow and additional effects */}
-        <style jsx>{`
+        <style>
+          {`
           .text-shadow {
             text-shadow: 0 2px 4px rgba(0,0,0,0.7);
           }
@@ -336,7 +337,8 @@ const Home = () => {
           .animate-float {
             animation: subtle-float 5s ease-in-out infinite;
           }
-        `}</style>
+          `}
+        </style>
       </section>
 
       {/* Features Section */}
@@ -463,9 +465,8 @@ const Home = () => {
       ))}
     </div>
   </div>
-
-  {/* Custom animation styles */}
-  <style jsx global>{`
+  <style>
+    {`
     @keyframes gradient {
       0% { background-position: 0% 50%; }
       50% { background-position: 100% 50%; }
@@ -475,7 +476,8 @@ const Home = () => {
       background-size: 200% 200%;
       animation: gradient 6s ease infinite;
     }
-  `}</style>
+    `}
+  </style>
 </section>
 
 
@@ -564,7 +566,7 @@ const Home = () => {
               with confidence, and earn a verified certificate from our platform.
             </p>
             <p className="text-base md:text-lg text-gray-300 font-medium leading-relaxed mt-4">
-              Your certification is more than just a document—it's a testament
+              Your certification is more than just a document—it&apos;s a testament
               to your dedication and knowledge.
             </p>
             <div className="mt-6 md:mt-8">
