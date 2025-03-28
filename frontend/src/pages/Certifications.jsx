@@ -47,12 +47,13 @@ const Certifications = () => {
   }, []);
 
   useEffect(() => {
+    let interval;
     if (timer > 0 && !submitted && testStarted) {
-      const interval = setInterval(() => setTimer((prev) => prev - 1), 1000);
-      return () => clearInterval(interval);
-    } else if (timer === 0 && !submitted) {
+      interval = setInterval(() => setTimer((prev) => prev - 1), 1000);
+    } else if (timer === 0 && !submitted && testStarted) {
       handleSubmit();
     }
+    return () => clearInterval(interval);
   }, [timer, submitted, testStarted]);
 
   useEffect(() => {
@@ -163,18 +164,7 @@ const Certifications = () => {
     generateCertificate(certificateName, score, questions.length);
   };
 
-  // Replace the problematic useEffect with this:
-  useEffect(() => {
-    let interval;
-    if (timer > 0 && !submitted && testStarted) {
-      interval = setInterval(() => setTimer((prev) => prev - 1), 1000);
-    } else if (timer === 0 && !submitted && testStarted) {
-      handleSubmit();
-    }
-    return () => clearInterval(interval);
-  }, [timer, submitted, testStarted]); // Remove handleSubmit from dependencies
-
-  // Replace the generateCertificate function with this corrected version:
+  // Simplified certificate generation with fewer decorative elements
   const generateCertificate = async (userName, score, totalQuestions) => {
     setIsGeneratingCertificate(true);
 
@@ -184,24 +174,9 @@ const Certifications = () => {
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
 
-      // Simplified background - avoids too many small rectangles
+      // Simple background
       doc.setFillColor(245, 245, 255);
       doc.rect(0, 0, pageWidth, pageHeight, "F");
-
-      // Add gradient overlay with fewer rectangles
-      for (let i = 0; i < pageHeight; i += 10) {
-        const factor = i / pageHeight;
-        const r = 245 - factor * 40;
-        const g = 245 - factor * 20;
-        const b = 255 - factor * 10;
-        doc.setFillColor(r, g, b);
-        doc.rect(0, i, pageWidth, 10, "F");
-      }
-
-      // Create certificate ID for verification
-      const certificateId = `UC-${Math.floor(
-        100000 + Math.random() * 900000
-      )}-${new Date().getFullYear()}`;
 
       // Calculate pass grade text and color
       let performanceText, performanceColor;
@@ -221,114 +196,23 @@ const Certifications = () => {
         performanceColor = [52, 73, 94]; // Dark blue-gray
       }
 
-      // Generate QR code for certificate verification
-      let qrCodeUrl;
-      try {
-        const qrData = `https://universityconnect.edu/verify?id=${certificateId}&name=${encodeURIComponent(
-          userName
-        )}&score=${score}&total=${totalQuestions}`;
-        qrCodeUrl = await new Promise((resolve, reject) => {
-          QRCode.toDataURL(qrData, { width: 100, margin: 1 }, (err, url) => {
-            if (err) reject(err);
-            else resolve(url);
-          });
-        });
-      } catch (qrError) {
-        console.error("QR code generation failed:", qrError);
-        // Fallback - continue without QR code
-        qrCodeUrl = null;
-      }
+      // Create certificate ID for verification
+      const certificateId = `UC-${Math.floor(
+        100000 + Math.random() * 900000
+      )}-${new Date().getFullYear()}`;
 
-      // Draw decorations - safer implementation
-      const drawDecorationCorner = (x, y, rotation) => {
-        // Save the current state
-        const currentFillColor = doc.getFillColor();
-        const currentDrawColor = doc.getDrawColor();
-        const currentLineWidth = doc.getLineWidth();
-
-        // We're only using fixed rotations (0, 90, 180, 270 degrees)
-        // so we'll calculate positions directly without using sin/cos
-
-        // Draw corner decoration with safe transformations
-        doc.setDrawColor(65, 105, 225); // Royal Blue
-        doc.setLineWidth(1.5);
-
-        // Draw lines with calculated coordinates instead of transform
-        if (rotation === 0) {
-          doc.line(x, y, x + 15, y);
-          doc.line(x, y, x, y + 15);
-        } else if (rotation === 90) {
-          doc.line(x, y, x, y + 15);
-          doc.line(x, y, x - 15, y);
-        } else if (rotation === 180) {
-          doc.line(x, y, x - 15, y);
-          doc.line(x, y, x, y - 15);
-        } else if (rotation === 270) {
-          doc.line(x, y, x, y - 15);
-          doc.line(x, y, x + 15, y);
-        }
-
-        // Restore original settings
-        doc.setFillColor(currentFillColor);
-        doc.setDrawColor(currentDrawColor);
-        doc.setLineWidth(currentLineWidth);
-      };
-
-      // Draw fancy border
-      doc.setDrawColor(65, 105, 225); // Royal Blue
+      // Simple border
+      doc.setDrawColor(65, 105, 225);
       doc.setLineWidth(2);
       doc.rect(15, 15, pageWidth - 30, pageHeight - 30);
 
-      // Inner border
-      doc.setDrawColor(100, 149, 237); // Cornflower Blue
-      doc.setLineWidth(0.75);
-      doc.rect(20, 20, pageWidth - 40, pageHeight - 40);
-
-      // Draw corner decorations with safer approach
-      drawDecorationCorner(15, 15, 0);
-      drawDecorationCorner(pageWidth - 15, 15, 90);
-      drawDecorationCorner(pageWidth - 15, pageHeight - 15, 180);
-      drawDecorationCorner(15, pageHeight - 15, 270);
-
-      // Add university logo
-      try {
-        const logoUrl =
-          "https://img.icons8.com/fluency/96/000000/graduation-cap.png";
-        doc.addImage(logoUrl, "PNG", pageWidth / 2 - 20, 25, 40, 40);
-      } catch (imageError) {
-        console.error("Error loading logo:", imageError);
-        // Continue without logo if there's an error
-      }
-
-      // Add decorative dividers
-      const addDivider = (y) => {
-        const lineWidth = 100;
-        doc.setLineWidth(1);
-        doc.setDrawColor(65, 105, 225);
-        doc.line(
-          pageWidth / 2 - lineWidth / 2,
-          y,
-          pageWidth / 2 + lineWidth / 2,
-          y
-        );
-
-        // Add decorative element in the middle
-        doc.setLineWidth(0.5);
-        doc.setDrawColor(100, 149, 237);
-        doc.circle(pageWidth / 2, y, 3, "S");
-        doc.setFillColor(230, 236, 255);
-        doc.circle(pageWidth / 2, y, 2, "F");
-      };
-
       // Certificate title
       doc.setFont("times", "bold");
-      doc.setTextColor(25, 25, 112); // Midnight Blue
+      doc.setTextColor(25, 25, 112);
       doc.setFontSize(42);
       doc.text("CERTIFICATE OF ACHIEVEMENT", pageWidth / 2, 80, {
         align: "center",
       });
-
-      addDivider(90);
 
       // Award text
       doc.setFontSize(16);
@@ -338,22 +222,11 @@ const Certifications = () => {
         align: "center",
       });
 
-      // Recipient name with decorative underline
+      // Recipient name
       doc.setFont("times", "bolditalic");
       doc.setFontSize(34);
       doc.setTextColor(25, 25, 112);
       doc.text(userName, pageWidth / 2, 125, { align: "center" });
-
-      // Underline the name
-      const nameWidth = doc.getTextWidth(userName);
-      doc.setLineWidth(1);
-      doc.setDrawColor(65, 105, 225);
-      doc.line(
-        pageWidth / 2 - nameWidth / 2,
-        128,
-        pageWidth / 2 + nameWidth / 2,
-        128
-      );
 
       // Achievement description
       doc.setFont("helvetica", "normal");
@@ -381,15 +254,12 @@ const Certifications = () => {
         { align: "center" }
       );
 
-      // Issue date with decorative elements
+      // Issue date
       const issueDate = new Date().toLocaleDateString("en-US", {
         year: "numeric",
         month: "long",
         day: "numeric",
       });
-
-      // Add second divider
-      addDivider(175);
 
       // Date and certificate ID
       doc.setFont("helvetica", "italic");
@@ -400,50 +270,8 @@ const Certifications = () => {
         align: "right",
       });
 
-      // Signatures
-      doc.setDrawColor(100, 100, 100);
-      doc.setLineWidth(0.5);
-      doc.line(60, 185, 140, 185);
-      doc.line(pageWidth - 140, 185, pageWidth - 60, 185);
-
-      doc.setFont("times", "bold");
-      doc.setFontSize(14);
-      doc.setTextColor(25, 25, 112);
-      doc.text("Program Director", 100, 195, { align: "center" });
-      doc.text("Chief Academic Officer", pageWidth - 100, 195, {
-        align: "center",
-      });
-
-      // Add QR code for verification if available
-      if (qrCodeUrl) {
-        try {
-          doc.addImage(qrCodeUrl, "PNG", pageWidth / 2 - 15, 178, 30, 30);
-        } catch (qrError) {
-          console.error("Error adding QR code to PDF:", qrError);
-          // Continue without QR if there's an error
-        }
-      }
-
-      // Add watermark - safer approach without GState
-      const originalFontSize = doc.getFontSize();
-      const originalTextColor = doc.getTextColor();
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(80);
-      doc.setTextColor(230, 236, 255); // Very light blue instead of opacity
-
-      // Draw watermark text - simpler approach without rotation
-      doc.text("UNIVERSITY CONNECT", pageWidth / 2, pageHeight / 2, {
-        align: "center",
-      });
-
-      // Restore original settings
-      doc.setFontSize(originalFontSize);
-      doc.setTextColor(originalTextColor);
-
       // Save the PDF
       doc.save(`${userName.replace(/\s+/g, "_")}_React_Certificate.pdf`);
-      // Success notification
       alert("Certificate generated successfully!");
     } catch (error) {
       console.error("Error generating certificate:", error);
@@ -609,11 +437,11 @@ const Certifications = () => {
             </div>
           </div>
           <h1 className="text-4xl font-extrabold text-center mb-6 text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-300">
-            React Certification Test
+            Programming Certification Test
           </h1>
           <div className="text-lg text-gray-300 space-y-4">
             <p>
-              Welcome to the React Certification Test! This test will evaluate
+              Welcome to the Programming Certification Test! This test will evaluate
               your knowledge of React and related concepts.
             </p>
             <p>
@@ -1022,232 +850,58 @@ const Certifications = () => {
             </div>
           ) : (
             <div className="max-w-2xl w-full bg-gradient-to-b from-gray-800 to-gray-900 p-8 rounded-xl shadow-xl border border-gray-700/50 animate-fadeIn">
-              <div className="text-center mb-8">
-                {result.passed ? (
-                  <div className="inline-flex items-center justify-center w-20 h-20 bg-green-500/20 rounded-full mb-4">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-12 w-12 text-green-400"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </div>
-                ) : (
-                  <div className="inline-flex items-center justify-center w-20 h-20 bg-red-500/20 rounded-full mb-4">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-12 w-12 text-red-400"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </div>
-                )}
-                <h2 className="text-3xl font-bold mb-2">
-                  <span
-                    className={
-                      result.passed
-                        ? "text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-300"
-                        : "text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-300"
-                    }
-                  >
-                    {result.passed ? "Congratulations! 🎉" : "Test Completed"}
+              <div className={`bg-gradient-to-br ${result.passed 
+                ? "from-blue-900/40 to-purple-900/40 border-blue-700/30" 
+                : "from-red-900/30 to-orange-900/30 border-red-800/50"} 
+                p-6 rounded-xl border shadow-lg`}>
+                <div className="text-center mb-4">
+                  <span className={`inline-block w-16 h-16 bg-gradient-to-r ${
+                    result.passed 
+                      ? "from-blue-500 to-purple-500" 
+                      : "from-red-600 to-orange-600"
+                    } rounded-full text-white text-2xl font-bold leading-[4rem]`}>
+                    {result.passed ? "✓" : "!"}
                   </span>
-                </h2>
-
-                <p className="text-gray-400 text-lg">
-                  {result.passed
-                    ? "You've successfully passed the React certification test!"
-                    : "You've completed the React certification test."}
-                </p>
-              </div>
-
-              <div className="bg-gradient-to-r from-gray-800/80 to-gray-700/80 p-6 rounded-xl mb-8 border border-gray-600/30 shadow-inner">
-                <div className="flex flex-col sm:flex-row items-center justify-between">
-                  <div className="text-center sm:text-left mb-4 sm:mb-0">
-                    <h3 className="text-lg font-semibold text-gray-300 mb-1">
-                      Your Score
-                    </h3>
-                    <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
-                      {score} / {questions.length}
-                    </div>
-                  </div>
-
-                  <div className="relative w-24 h-24">
-                    <svg className="w-full h-full" viewBox="0 0 100 100">
-                      <circle
-                        className="text-gray-700"
-                        strokeWidth="8"
-                        stroke="currentColor"
-                        fill="transparent"
-                        r="40"
-                        cx="50"
-                        cy="50"
-                      />
-                      <circle
-                        className={`${
-                          result.passed ? "text-green-400" : "text-red-400"
-                        }`}
-                        strokeWidth="8"
-                        strokeLinecap="round"
-                        stroke="currentColor"
-                        fill="transparent"
-                        r="40"
-                        cx="50"
-                        cy="50"
-                        strokeDasharray={`${2 * Math.PI * 40}`}
-                        strokeDashoffset={`${
-                          2 * Math.PI * 40 * (1 - score / questions.length)
-                        }`}
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center text-lg font-bold">
-                      {Math.round((score / questions.length) * 100)}%
-                    </div>
-                  </div>
                 </div>
-              </div>
+                <h3 className={`text-xl font-bold text-center mb-3 text-transparent bg-clip-text bg-gradient-to-r ${
+                  result.passed 
+                    ? "from-blue-300 to-purple-300" 
+                    : "from-red-300 to-orange-300"}`}>
+                  {result.passed ? "Certification Achievement" : "Not Quite There Yet"}
+                </h3>
+                <p className="text-gray-300 text-center mb-6">
+                  {result.passed 
+                    ? "Your certificate is ready to be generated and downloaded." 
+                    : "You did not pass the certification. Keep learning and try again!"}
+                </p>
 
-              {result.passed ? (
-                <div className="space-y-6">
-                  <div className="mb-6 bg-gradient-to-br from-blue-900/40 to-purple-900/40 p-6 rounded-xl border border-blue-700/30 shadow-lg">
-                    <div className="flex items-center justify-center mb-4">
-                      <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center shadow-lg">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-8 w-8 text-white"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                      </div>
-                    </div>
-                    <h3 className="text-xl font-bold text-center mb-3 text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-purple-300">
-                      Certification Achievement
-                    </h3>
-                    <p className="text-gray-300 text-center mb-6">
-                      Your certificate is ready to be generated and downloaded.
-                    </p>
-
-                    <div className="flex flex-col sm:flex-row justify-center gap-4">
+                <div className="flex flex-col sm:flex-row justify-center gap-4">
+                  {result.passed ? (
+                    <>
                       <button
                         onClick={openNameConfirmationDialog}
                         disabled={isGeneratingCertificate}
                         className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white px-6 py-3 rounded-lg text-lg font-semibold transition-all duration-300 transform hover:scale-105 flex items-center justify-center shadow-md disabled:opacity-70 disabled:hover:scale-100"
                       >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5 mr-2"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                          />
-                        </svg>
-                        Generate Certificate
+                        📄 Generate Certificate
                       </button>
-
                       <button
                         onClick={() => setShowConfetti(true)}
                         className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white px-6 py-3 rounded-lg text-lg font-semibold transition-all duration-300 transform hover:scale-105 flex items-center justify-center shadow-md"
                       >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5 mr-2"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
-                          />
-                        </svg>
-                        Celebrate!
+                        🎉 Celebrate!
                       </button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-gradient-to-br from-red-900/30 to-orange-900/30 p-6 rounded-xl border border-red-800/50 shadow-lg">
-                  <div className="flex items-center justify-center mb-4">
-                    <div className="w-16 h-16 bg-gradient-to-r from-red-600 to-orange-600 rounded-full flex items-center justify-center shadow-lg">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-8 w-8 text-white"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-bold text-center mb-3 text-transparent bg-clip-text bg-gradient-to-r from-red-300 to-orange-300">
-                    Not Quite There Yet
-                  </h3>
-                  <p className="text-gray-300 text-lg mb-6 text-center">
-                    You did not pass the certification. Keep learning and try
-                    again!
-                  </p>
-                  <div className="flex justify-center">
+                    </>
+                  ) : (
                     <button
                       onClick={() => window.location.reload()}
-                      className="bg-gradient-to-r from-red-600 to-orange-500 hover:from-red-700 hover:to-orange-600 text-white px-8 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-md flex items-center"
+                      className="bg-gradient-to-r from-red-600 to-orange-500 hover:from-red-700 hover:to-orange-600 text-white px-8 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-md"
                     >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5 mr-2"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                        />
-                      </svg>
-                      Try Again
+                      🔄 Try Again
                     </button>
-                  </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           )}
         </>
