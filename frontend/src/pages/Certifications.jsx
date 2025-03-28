@@ -7,7 +7,7 @@ import {
 import jsPDF from "jspdf";
 import React from "react";
 import Confetti from "react-confetti";
-import QRCode from "qrcode";
+
 
 const Certifications = () => {
   const [questions, setQuestions] = useState([]);
