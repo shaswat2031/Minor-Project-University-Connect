@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
-const User = require("../models/userModel");
+const User = require("../models/User");
 
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
@@ -20,7 +20,9 @@ const loginUser = async (req, res) => {
     // Debugging log to ensure user is found and password matches
     console.log("User authenticated:", user);
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
 
     // Debugging log to ensure token is generated
     console.log("Generated token:", token);
@@ -30,8 +32,8 @@ const loginUser = async (req, res) => {
       user: {
         id: user._id,
         email: user.email,
-        name: user.name
-      }
+        name: user.name,
+      },
     });
   } catch (error) {
     console.error("Error in loginUser:", error);
@@ -52,20 +54,22 @@ const registerUser = async (req, res) => {
     user = new User({
       name,
       email,
-      password: hashedPassword
+      password: hashedPassword,
     });
 
     await user.save();
-    
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
-    
+
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
     res.status(201).json({
       token,
       user: {
         id: user._id,
         email: user.email,
-        name: user.name
-      }
+        name: user.name,
+      },
     });
   } catch (error) {
     res.status(500).json({ message: "Server error" });

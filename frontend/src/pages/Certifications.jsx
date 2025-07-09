@@ -1,63 +1,137 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import axios from "axios";
+import {
+  FaCertificate,
+  FaCode,
+  FaTimes,
+  FaPlay,
+  FaStop,
+  FaQuestionCircle,
+} from "react-icons/fa";
 import {
   fetchCertificationQuestions,
   submitCertificationAnswers,
   fetchUserProfile,
 } from "../api/certification";
 import jsPDF from "jspdf";
-import React from "react";
 import Confetti from "react-confetti";
 
-
 const Certifications = () => {
+  const [activeTab, setActiveTab] = useState("available");
+  const [certifications, setCertifications] = useState([]);
+  const [activeCertification, setActiveCertification] = useState(null);
   const [questions, setQuestions] = useState([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
+  const [timeRemaining, setTimeRemaining] = useState(null);
+  const [examStarted, setExamStarted] = useState(false);
+  const [examCompleted, setExamCompleted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState(null);
+  const [showResult, setShowResult] = useState(false);
   const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [score, setScore] = useState(0);
-  const [submitted, setSubmitted] = useState(false);
-  const [timer, setTimer] = useState(1800); // 30 minutes in seconds
+  const [testStarted, setTestStarted] = useState(false);
   const [showTestDetails, setShowTestDetails] = useState(true);
   const [showAgreementDialog, setShowAgreementDialog] = useState(false);
-  const [testStarted, setTestStarted] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false); // State to control confetti
   const [showNameConfirmation, setShowNameConfirmation] = useState(false); // New state for name confirmation
   const [certificateName, setCertificateName] = useState(""); // New state for certificate name
   const [isGeneratingCertificate, setIsGeneratingCertificate] = useState(false); // State for certificate generation
+  const [currentPage, setCurrentPage] = useState(1);
+  const [score, setScore] = useState(0);
+
+  // Add missing state variables
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(1800);
+
+  const categories = [
+    {
+      id: "React",
+      name: "React.js",
+      description: "Test your React.js knowledge",
+      icon: "⚛️",
+      color: "from-blue-500 to-cyan-400",
+    },
+    {
+      id: "Java",
+      name: "Java Programming",
+      description: "Core Java concepts and OOP",
+      icon: "☕",
+      color: "from-orange-500 to-red-500",
+    },
+    {
+      id: "Python",
+      name: "Python Programming",
+      description: "Python fundamentals and syntax",
+      icon: "🐍",
+      color: "from-green-500 to-teal-400",
+    },
+    {
+      id: "JavaScript",
+      name: "JavaScript",
+      description: "Modern JavaScript ES6+",
+      icon: "🚀",
+      color: "from-yellow-500 to-orange-400",
+    },
+    {
+      id: "Data Structures",
+      name: "Data Structures",
+      description: "Arrays, Trees, Graphs & more",
+      icon: "🏗️",
+      color: "from-purple-500 to-pink-500",
+    },
+    {
+      id: "Algorithms",
+      name: "Algorithms",
+      description: "Sorting, Searching & Optimization",
+      icon: "🧮",
+      color: "from-indigo-500 to-purple-500",
+    },
+    {
+      id: "Web Development",
+      name: "Web Development",
+      description: "HTML, CSS, and web technologies",
+      icon: "🌐",
+      color: "from-pink-500 to-rose-400",
+    },
+  ];
 
   const questionsPerPage = 5;
-  useEffect(() => {
-    const fetchQuestions = async () => {
-      try {
-        setLoading(true);
-        const data = await fetchCertificationQuestions();
-        if (data && data.length > 0) {
-          setQuestions(data);
-        } else {
-          console.warn("No questions available");
-        }
-      } catch (error) {
-        console.error("Error:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchQuestions();
-  }, []);
+
+  // Remove the initial useEffect that fetches questions without category
+  // useEffect(() => {
+  //   const fetchQuestions = async () => {
+  //     try {
+  //       setLoading(true);
+  //       const data = await fetchCertificationQuestions();
+  //       if (data && data.length > 0) {
+  //         setQuestions(data);
+  //       } else {
+  //         console.warn("No questions available");
+  //       }
+  //     } catch (error) {
+  //       console.error("Error:", error);
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+  //   fetchQuestions();
+  // }, []);
 
   useEffect(() => {
     let interval;
-    if (timer > 0 && !submitted && testStarted) {
-      interval = setInterval(() => setTimer((prev) => prev - 1), 1000);
-    } else if (timer === 0 && !submitted && testStarted) {
+    if (timeRemaining > 0 && !showResult && examStarted) {
+      interval = setInterval(() => setTimeRemaining((prev) => prev - 1), 1000);
+    } else if (timeRemaining === 0 && !showResult && examStarted) {
       handleSubmit();
     }
     return () => clearInterval(interval);
-  }, [timer, submitted, testStarted]);
+  }, [timeRemaining, showResult, examStarted]);
 
   useEffect(() => {
-    if (testStarted) {
+    if (examStarted) {
       const handleFullScreenChange = () => {
         if (!document.fullscreenElement) {
           // User exited full-screen mode
@@ -74,7 +148,7 @@ const Certifications = () => {
         );
       };
     }
-  }, [testStarted]);
+  }, [examStarted]);
 
   const handleAnswer = (index, answer) => {
     setAnswers((prev) => ({ ...prev, [index]: answer }));
@@ -104,29 +178,46 @@ const Certifications = () => {
         return;
       }
 
-      setSubmitted(true);
+      setShowResult(true);
 
+      // Calculate score for MCQ questions only
       let correctCount = 0;
       questions.forEach((q, index) => {
-        if (answers[index] === q.correctAnswer) correctCount++;
+        if (q.type === "mcq" && answers[index] === q.correctAnswer) {
+          correctCount++;
+        }
       });
 
       setScore(correctCount);
-      const percentage = (correctCount / questions.length) * 100;
-      const passed = percentage >= 1;
+      const mcqQuestions = questions.filter((q) => q.type === "mcq");
+      const percentage =
+        mcqQuestions.length > 0
+          ? (correctCount / mcqQuestions.length) * 100
+          : 0;
+      const passed = percentage >= 65;
 
-      const formattedAnswers = questions.map(
-        (q, index) => answers[index] || ""
-      );
+      // For coding questions, we need to send the code as answer
+      const formattedAnswers = questions.map((q, index) => {
+        if (q.type === "coding") {
+          return answers[index] || ""; // Send code for coding questions
+        }
+        return answers[index] || ""; // For MCQ, send the selected answer
+      });
 
       const res = await submitCertificationAnswers(
         userId,
         userName,
-        "React",
+        selectedCategory,
         formattedAnswers
       );
 
-      setResult({ ...res, passed });
+      setResult({
+        ...res,
+        passed,
+        score: correctCount,
+        totalQuestions: questions.length,
+        percentage,
+      });
 
       localStorage.removeItem("certificationAnswers");
 
@@ -233,7 +324,7 @@ const Certifications = () => {
       doc.setFontSize(16);
       doc.setTextColor(70, 70, 70);
       doc.text(
-        `has successfully completed the React Certification Examination with a score of`,
+        `has successfully completed the ${selectedCategory} Certification Examination with a score of`,
         pageWidth / 2,
         145,
         { align: "center" }
@@ -271,7 +362,9 @@ const Certifications = () => {
       });
 
       // Save the PDF
-      doc.save(`${userName.replace(/\s+/g, "_")}_React_Certificate.pdf`);
+      doc.save(
+        `${userName.replace(/\s+/g, "_")}_${selectedCategory}_Certificate.pdf`
+      );
       alert("Certificate generated successfully!");
     } catch (error) {
       console.error("Error generating certificate:", error);
@@ -302,612 +395,509 @@ const Certifications = () => {
     document.addEventListener("contextmenu", (e) => e.preventDefault());
   };
 
-  const startIndex = (currentPage - 1) * questionsPerPage;
-  const endIndex = startIndex + questionsPerPage;
-  const paginatedQuestions = questions.slice(startIndex, endIndex);
-
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds < 10 ? "0" : ""}${remainingSeconds}`;
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-white p-6 flex flex-col items-center">
-      {showConfetti && <Confetti recycle={false} numberOfPieces={200} />}
+  // Updated fetchQuestions function to get mixed MCQ and coding questions
+  const fetchQuestions = async (category) => {
+    setLoading(true);
+    try {
+      // Fetch both MCQ and coding questions for the category
+      const [mcqResponse, codingResponse] = await Promise.all([
+        axios.get(`${import.meta.env.VITE_API_URL}/api/admin/mcq`, {
+          params: { category, limit: 15 }, // Get 15 MCQ questions
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }),
+        axios.get(`${import.meta.env.VITE_API_URL}/api/admin/coding`, {
+          params: { category, limit: 15 }, // Get 15 coding questions
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }),
+      ]);
 
-      {/* Name confirmation dialog */}
-      {showNameConfirmation && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-gradient-to-b from-gray-800 to-gray-900 p-8 rounded-xl shadow-2xl max-w-md w-full border border-gray-700 transform animate-scaleIn">
-            <h2 className="text-2xl font-bold text-blue-400 mb-4 flex items-center">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6 mr-2 text-blue-300"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                />
-              </svg>
-              Certificate Name
-            </h2>
-            <p className="text-gray-300 mb-5">
-              Please confirm how your name should appear on the certificate:
+      const mcqQuestions = mcqResponse.data.questions || [];
+      const codingQuestions = codingResponse.data.questions || [];
+
+      // Add type property to distinguish between MCQ and coding questions
+      const formattedMcqQuestions = mcqQuestions.map((q) => ({
+        ...q,
+        type: "mcq",
+      }));
+
+      const formattedCodingQuestions = codingQuestions.map((q) => ({
+        ...q,
+        type: "coding",
+      }));
+
+      // Combine and shuffle questions
+      const allQuestions = [
+        ...formattedMcqQuestions,
+        ...formattedCodingQuestions,
+      ];
+      const shuffledQuestions = allQuestions.sort(() => Math.random() - 0.5);
+
+      // Take only 30 questions total
+      const selectedQuestions = shuffledQuestions.slice(0, 30);
+
+      setQuestions(selectedQuestions);
+      setAnswers({}); // Reset answers as object
+      setCurrentQuestion(0);
+      setTestStarted(true);
+      setTimeRemaining(1800); // Reset timer to 30 minutes
+      setExamStarted(true);
+    } catch (error) {
+      console.error("Error fetching questions:", error);
+      alert("Failed to fetch questions. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAnswerSelect = (answer) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [currentQuestion]: answer,
+    }));
+  };
+
+  // Updated handleAnswer for coding questions
+  const handleCodingAnswer = (code) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [currentQuestion]: code,
+    }));
+  };
+
+  const handleNext = () => {
+    if (currentQuestion < questions.length - 1) {
+      setCurrentQuestion(currentQuestion + 1);
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentQuestion > 0) {
+      setCurrentQuestion(currentQuestion - 1);
+    }
+  };
+
+  const resetTest = () => {
+    setSelectedCategory("");
+    setQuestions([]);
+    setCurrentQuestion(0);
+    setAnswers({});
+    setShowResult(false);
+    setResult(null);
+    setTestStarted(false);
+    setTimeRemaining(1800);
+    setShowConfetti(false);
+    setShowNameConfirmation(false);
+    setCertificateName("");
+    setCurrentPage(1);
+    setScore(0);
+    setExamStarted(false);
+  };
+
+  // Category selection screen
+  if (!selectedCategory) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 p-6">
+        <div className="max-w-6xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center mb-12"
+          >
+            <h1 className="text-5xl font-bold text-white mb-4">
+              Choose Your <span className="text-blue-400">Certification</span>
+            </h1>
+            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+              Select a category to start your certification test. Each test
+              contains 30 questions and you need 65% to pass and earn your
+              certificate.
             </p>
+          </motion.div>
 
-            <div className="mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {categories.map((category, index) => (
+              <motion.div
+                key={category.id}
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="group cursor-pointer"
+                onClick={() => setSelectedCategory(category.id)}
+              >
+                <div
+                  className={`bg-gradient-to-br ${category.color} p-1 rounded-xl shadow-lg transform group-hover:scale-105 transition-all duration-300`}
+                >
+                  <div className="bg-gray-800 rounded-lg p-6 h-full">
+                    <div className="text-center">
+                      <div className="text-4xl mb-4">{category.icon}</div>
+                      <h3 className="text-xl font-bold text-white mb-2">
+                        {category.name}
+                      </h3>
+                      <p className="text-gray-400 mb-4">
+                        {category.description}
+                      </p>
+                      <div
+                        className={`inline-block px-4 py-2 bg-gradient-to-r ${category.color} text-white rounded-lg font-semibold group-hover:shadow-lg transition-shadow`}
+                      >
+                        Start Test
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading screen
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 flex items-center justify-center">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            ease: "linear",
+          }}
+          className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full"
+        />
+      </div>
+    );
+  }
+
+  // Result screen
+  if (showResult && result) {
+    const selectedCat = categories.find((cat) => cat.id === selectedCategory);
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 flex items-center justify-center p-6">
+        {showConfetti && (
+          <Confetti width={window.innerWidth} height={window.innerHeight} />
+        )}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-gray-800 rounded-xl p-8 max-w-lg w-full text-center border border-gray-700"
+        >
+          <div className="text-6xl mb-4">{result.passed ? "🎉" : "😔"}</div>
+          <h2 className="text-3xl font-bold text-white mb-4">
+            {result.passed ? "Congratulations!" : "Better Luck Next Time!"}
+          </h2>
+          <div className="text-xl text-gray-300 mb-6">
+            <p>
+              Score: {result.score}/{result.totalQuestions}
+            </p>
+            <p>Percentage: {result.percentage?.toFixed(1)}%</p>
+            <p className="text-sm text-gray-400 mt-2">
+              Category: {selectedCat?.name}
+            </p>
+          </div>
+          {result.passed && (
+            <div className="mb-4 space-y-3">
+              {result.certificateUrl && (
+                <motion.a
+                  href={`${import.meta.env.VITE_API_URL}${
+                    result.certificateUrl
+                  }`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition mr-3"
+                  whileHover={{ scale: 1.05 }}
+                >
+                  Download Server Certificate
+                </motion.a>
+              )}
+              <motion.button
+                onClick={openNameConfirmationDialog}
+                className="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition"
+                whileHover={{ scale: 1.05 }}
+                disabled={isGeneratingCertificate}
+              >
+                {isGeneratingCertificate
+                  ? "Generating..."
+                  : "Generate Custom Certificate"}
+              </motion.button>
+            </div>
+          )}
+          <div className="flex gap-4 justify-center">
+            <button
+              onClick={() => fetchQuestions(selectedCategory)}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            >
+              Retake Test
+            </button>
+            <button
+              onClick={resetTest}
+              className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
+            >
+              Choose Different Category
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Test screen
+  if (!testStarted) {
+    const selectedCat = categories.find((cat) => cat.id === selectedCategory);
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 flex items-center justify-center p-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gray-800 rounded-xl p-8 max-w-lg w-full text-center border border-gray-700"
+        >
+          <div className="text-4xl mb-4">{selectedCat?.icon}</div>
+          <h2 className="text-2xl font-bold text-white mb-4">
+            {selectedCat?.name} Certification
+          </h2>
+          <div className="text-gray-300 mb-6 space-y-2">
+            <p>• 30 Multiple Choice Questions</p>
+            <p>• 30 Minutes Time Limit</p>
+            <p>• 65% Required to Pass</p>
+            <p>• Certificate upon successful completion</p>
+          </div>
+          <div className="flex gap-4 justify-center">
+            <button
+              onClick={() => fetchQuestions(selectedCategory)}
+              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold"
+            >
+              Start Test
+            </button>
+            <button
+              onClick={resetTest}
+              className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
+            >
+              Back to Categories
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Questions screen with mixed MCQ and coding questions
+  if (testStarted && questions.length > 0) {
+    const currentQ = questions[currentQuestion];
+    const progress = ((currentQuestion + 1) / questions.length) * 100;
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 p-6">
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="bg-gray-800 rounded-xl p-6 mb-6 border border-gray-700">
+            <div className="flex justify-between items-center mb-4">
+              <h1 className="text-2xl font-bold text-white">
+                {categories.find((cat) => cat.id === selectedCategory)?.name}{" "}
+                Test
+              </h1>
+              <div className="text-xl font-mono text-red-400">
+                ⏰ {formatTime(timeRemaining)}
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="w-full bg-gray-700 rounded-full h-2 mb-2">
+              <motion.div
+                className="bg-blue-500 h-2 rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${progress}%` }}
+                transition={{ duration: 0.3 }}
+              />
+            </div>
+            <p className="text-gray-400 text-sm">
+              Question {currentQuestion + 1} of {questions.length}
+            </p>
+          </div>
+
+          {/* Question */}
+          <motion.div
+            key={currentQuestion}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="bg-gray-800 rounded-xl p-6 mb-6 border border-gray-700"
+          >
+            {/* Question Type Indicator */}
+            <div className="flex items-center mb-4">
+              {currentQ?.type === "mcq" ? (
+                <>
+                  <FaQuestionCircle className="text-blue-400 mr-2" />
+                  <span className="text-blue-400 font-semibold">
+                    MCQ Question
+                  </span>
+                </>
+              ) : (
+                <>
+                  <FaCode className="text-green-400 mr-2" />
+                  <span className="text-green-400 font-semibold">
+                    Coding Problem
+                  </span>
+                </>
+              )}
+            </div>
+
+            {/* MCQ Question */}
+            {currentQ?.type === "mcq" ? (
+              <>
+                <h2 className="text-xl font-semibold text-white mb-6">
+                  {currentQ?.question}
+                </h2>
+                <div className="space-y-3">
+                  {currentQ?.options?.map((option, index) => (
+                    <motion.button
+                      key={index}
+                      onClick={() => handleAnswerSelect(option)}
+                      className={`w-full p-4 text-left rounded-lg border transition-all duration-200 ${
+                        answers[currentQuestion] === option
+                          ? "bg-blue-600 border-blue-500 text-white"
+                          : "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600"
+                      }`}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <span className="font-medium mr-3">
+                        {String.fromCharCode(65 + index)}.
+                      </span>
+                      {option}
+                    </motion.button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              /* Coding Question */
+              <>
+                <h2 className="text-xl font-semibold text-white mb-4">
+                  {currentQ?.title}
+                </h2>
+                <div className="bg-gray-700 p-4 rounded-lg mb-4">
+                  <p className="text-gray-300 whitespace-pre-wrap">
+                    {currentQ?.description}
+                  </p>
+                </div>
+                {currentQ?.constraints && (
+                  <div className="bg-gray-700 p-3 rounded-lg mb-4">
+                    <h4 className="text-white font-semibold mb-2">
+                      Constraints:
+                    </h4>
+                    <p className="text-gray-300 text-sm">
+                      {currentQ.constraints}
+                    </p>
+                  </div>
+                )}
+                <div className="mb-4">
+                  <label className="block text-gray-300 mb-2">
+                    Your Solution:
+                  </label>
+                  <textarea
+                    value={
+                      answers[currentQuestion] || currentQ?.starterCode || ""
+                    }
+                    onChange={(e) => handleCodingAnswer(e.target.value)}
+                    className="w-full h-64 p-4 bg-gray-900 text-white font-mono text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Write your code here..."
+                  />
+                </div>
+              </>
+            )}
+          </motion.div>
+
+          {/* Navigation */}
+          <div className="flex justify-between items-center">
+            <button
+              onClick={handlePrevious}
+              disabled={currentQuestion === 0}
+              className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+
+            <div className="flex gap-2 max-w-md overflow-x-auto">
+              {questions.map((q, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentQuestion(index)}
+                  className={`w-8 h-8 rounded-full text-sm font-semibold transition flex-shrink-0 ${
+                    index === currentQuestion
+                      ? "bg-blue-600 text-white"
+                      : answers[index]
+                      ? q.type === "mcq"
+                        ? "bg-blue-500 text-white"
+                        : "bg-green-500 text-white"
+                      : q.type === "mcq"
+                      ? "bg-gray-600 text-gray-300 hover:bg-gray-500"
+                      : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                  }`}
+                  title={q.type === "mcq" ? "MCQ" : "Coding"}
+                >
+                  {index + 1}
+                </button>
+              ))}
+            </div>
+
+            {currentQuestion === questions.length - 1 ? (
+              <button
+                onClick={handleSubmit}
+                className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold"
+              >
+                Submit Test
+              </button>
+            ) : (
+              <button
+                onClick={handleNext}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+              >
+                Next
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Name Confirmation Dialog */}
+        {showNameConfirmation && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-75">
+            <div className="bg-gray-800 p-6 rounded-lg shadow-lg max-w-md w-full">
+              <h3 className="text-xl font-bold text-white mb-4">
+                Confirm Your Name for Certificate
+              </h3>
               <input
                 type="text"
                 value={certificateName}
                 onChange={(e) => setCertificateName(e.target.value)}
-                className="w-full bg-gray-700/60 text-white border border-gray-600 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                className="w-full p-3 bg-gray-700 text-white rounded-md mb-4"
                 placeholder="Enter your full name"
               />
-              <p className="text-sm text-gray-400 mt-2 italic">
-                This name will be displayed on your certificate. Make sure
-                it&#39;s spelled correctly.
-              </p>
-            </div>
-
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setShowNameConfirmation(false)}
-                className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white transition-colors duration-300 transform hover:scale-105"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleNameConfirmation}
-                disabled={isGeneratingCertificate}
-                className="px-6 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white flex items-center transition-all duration-300 transform hover:scale-105 disabled:opacity-70 disabled:hover:scale-100 shadow-md"
-              >
-                {isGeneratingCertificate ? (
-                  <>
-                    <svg
-                      className="animate-spin -ml-1 mr-2 h-5 w-5 text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5 mr-1.5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    Confirm & Generate
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showTestDetails && (
-        <div className="max-w-2xl w-full bg-gradient-to-b from-gray-800 to-gray-900 p-8 rounded-xl shadow-2xl border border-gray-700/50 animate-fadeIn">
-          <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center shadow-lg">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-8 w-8 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-          </div>
-          <h1 className="text-4xl font-extrabold text-center mb-6 text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-300">
-            Programming Certification Test
-          </h1>
-          <div className="text-lg text-gray-300 space-y-4">
-            <p>
-              Welcome to the Programming Certification Test! This test will evaluate
-              your knowledge of React and related concepts.
-            </p>
-            <p>
-              The test consists of {questions.length} questions and you will
-              have 30 minutes to complete it.
-            </p>
-            <p>
-              Please ensure that you are in a quiet environment and have a
-              stable internet connection before starting the test.
-            </p>
-            <p>
-              Once you start the test, you will not be able to pause or restart
-              it. Good luck!
-            </p>
-          </div>
-          <button
-            onClick={startTest}
-            className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white py-3 rounded-lg mt-8 text-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-md flex items-center justify-center"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5 mr-2"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            Start Test
-          </button>
-        </div>
-      )}
-
-      {showAgreementDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn">
-          <div className="bg-gradient-to-b from-gray-800 to-gray-900 p-8 rounded-xl shadow-2xl max-w-md w-full border border-gray-700/50 animate-scaleIn">
-            <div className="flex justify-center mb-4">
-              <div className="w-12 h-12 bg-yellow-500/90 rounded-full flex items-center justify-center shadow-lg">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6 text-gray-900"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </div>
-            </div>
-            <h2 className="text-2xl font-bold text-center text-yellow-300 mb-4">
-              Test Agreement
-            </h2>
-            <p className="text-gray-300 mb-4">
-              By starting the test, you agree to the following:
-            </p>
-            <ul className="space-y-2 text-gray-300 mb-6">
-              <li className="flex items-start">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-yellow-400 mr-2 mt-0.5 flex-shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                You will not copy or paste any content.
-              </li>
-              <li className="flex items-start">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-yellow-400 mr-2 mt-0.5 flex-shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                You will not use any external resources.
-              </li>
-              <li className="flex items-start">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-yellow-400 mr-2 mt-0.5 flex-shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                You will complete the test in one sitting.
-              </li>
-              <li className="flex items-start">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-yellow-400 mr-2 mt-0.5 flex-shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                You will not exit full-screen mode during the test.
-              </li>
-            </ul>
-            <div className="flex justify-end space-x-4">
-              <button
-                onClick={() => setShowAgreementDialog(false)}
-                className="bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-lg transition-colors duration-300 transform hover:scale-105"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={agreeToStartTest}
-                className="bg-gradient-to-r from-yellow-500 to-yellow-400 hover:from-yellow-600 hover:to-yellow-500 text-gray-900 font-medium px-5 py-2 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-md flex items-center"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 mr-1.5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                I Agree
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {testStarted && (
-        <>
-          {loading ? (
-            <div className="flex flex-col items-center justify-center h-64">
-              <svg
-                className="animate-spin h-12 w-12 text-blue-400 mb-4"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              <div className="text-center text-xl font-semibold text-gray-300">
-                Loading Your Questions...
-              </div>
-            </div>
-          ) : !result ? (
-            <div className="max-w-2xl w-full bg-gradient-to-b from-gray-800 to-gray-900 p-8 rounded-xl shadow-xl border border-gray-700/50 animate-fadeIn">
-              <div className="flex items-center justify-between mb-6">
-                <div className="text-sm font-medium text-gray-400">
-                  Question {startIndex + 1}-
-                  {Math.min(endIndex, questions.length)} of {questions.length}
-                </div>
-                <div className="flex items-center text-lg font-semibold text-red-400">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 mr-1.5 text-red-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  {formatTime(timer)}
-                </div>
-              </div>
-
-              <div className="w-full bg-gray-700/30 h-2 rounded-full mb-8">
-                <div
-                  className="bg-gradient-to-r from-blue-500 to-purple-500 h-full rounded-full transition-all duration-500 ease-out"
-                  style={{
-                    width: `${
-                      (Object.keys(answers).length / questions.length) * 100
-                    }%`,
-                  }}
-                ></div>
-              </div>
-
-              {paginatedQuestions.map((q, index) => (
-                <div
-                  key={startIndex + index}
-                  className="mb-8 bg-gray-800/50 p-6 rounded-xl border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300"
-                >
-                  <h3 className="text-lg font-semibold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-300">
-                    <span className="text-yellow-400 mr-2">
-                      {startIndex + index + 1}.
-                    </span>{" "}
-                    {q.question}
-                  </h3>
-                  <div className="space-y-3 mt-4">
-                    {q.options.map((option) => (
-                      <label
-                        key={option}
-                        className={`block p-3.5 rounded-lg cursor-pointer transition-all duration-200 ease-in-out
-                    ${
-                      answers[startIndex + index] === option
-                        ? "bg-gradient-to-r from-green-600/80 to-emerald-600/80 border-l-4 border-emerald-400 pl-4 transform scale-102 shadow-md"
-                        : "bg-gray-700/60 hover:bg-gray-700/90 border-l-4 border-transparent hover:border-gray-500 pl-4"
-                    }`}
-                      >
-                        <div className="flex items-center">
-                          <div
-                            className={`w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center border-2 ${
-                              answers[startIndex + index] === option
-                                ? "border-green-300"
-                                : "border-gray-500"
-                            }`}
-                          >
-                            {answers[startIndex + index] === option && (
-                              <div className="w-2.5 h-2.5 bg-green-300 rounded-full"></div>
-                            )}
-                          </div>
-                          <input
-                            type="radio"
-                            name={`q${startIndex + index}`}
-                            value={option}
-                            onChange={() =>
-                              handleAnswer(startIndex + index, option)
-                            }
-                            className="hidden"
-                          />
-                          <span className="ml-3">{option}</span>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              ))}
-
-              <div className="flex justify-between items-center mt-6">
+              <div className="flex justify-end space-x-3">
                 <button
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.max(prev - 1, 1))
-                  }
-                  disabled={currentPage === 1}
-                  className={`flex items-center px-4 py-2.5 rounded-lg transition-all duration-300 ${
-                    currentPage === 1
-                      ? "bg-gray-700/50 text-gray-500 cursor-not-allowed"
-                      : "bg-gray-700 hover:bg-gray-600 text-white hover:shadow-md transform hover:scale-105"
-                  }`}
+                  onClick={() => setShowNameConfirmation(false)}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 mr-1.5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 19l-7-7 7-7"
-                    />
-                  </svg>
-                  Previous
+                  Cancel
                 </button>
-
-                <div className="flex items-center">
-                  {Array.from({
-                    length: Math.ceil(questions.length / questionsPerPage),
-                  }).map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setCurrentPage(i + 1)}
-                      className={`w-8 h-8 mx-1 rounded-full flex items-center justify-center transition-all duration-300 ${
-                        currentPage === i + 1
-                          ? "bg-blue-500 text-white"
-                          : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                      }`}
-                    >
-                      {i + 1}
-                    </button>
-                  ))}
-                </div>
-
                 <button
-                  onClick={() =>
-                    setCurrentPage((prev) =>
-                      Math.min(
-                        prev + 1,
-                        Math.ceil(questions.length / questionsPerPage)
-                      )
-                    )
-                  }
-                  disabled={
-                    Object.keys(answers).filter(
-                      (k) => k >= startIndex && k < endIndex
-                    ).length < paginatedQuestions.length
-                  }
-                  className={`flex items-center px-4 py-2.5 rounded-lg transition-all duration-300 ${
-                    Object.keys(answers).filter(
-                      (k) => k >= startIndex && k < endIndex
-                    ).length < paginatedQuestions.length
-                      ? "bg-gray-700/50 text-gray-500 cursor-not-allowed"
-                      : "bg-gray-700 hover:bg-gray-600 text-white hover:shadow-md transform hover:scale-105"
-                  }`}
+                  onClick={handleNameConfirmation}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                 >
-                  Next
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 ml-1.5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
+                  Generate Certificate
                 </button>
               </div>
-
-              {endIndex >= questions.length &&
-                Object.keys(answers).length === questions.length && (
-                  <div className="mt-8 pt-6 border-t border-gray-700">
-                    <button
-                      onClick={handleSubmit}
-                      className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white py-3.5 rounded-lg text-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-md flex items-center justify-center"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6 mr-2"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                      Submit Test
-                    </button>
-                    <p className="text-center text-gray-400 text-sm mt-3">
-                      You&apos;ve answered all {questions.length} questions. Good
-                      luck!
-                    </p>
-                  </div>
-                )}
             </div>
-          ) : (
-            <div className="max-w-2xl w-full bg-gradient-to-b from-gray-800 to-gray-900 p-8 rounded-xl shadow-xl border border-gray-700/50 animate-fadeIn">
-              <div className={`bg-gradient-to-br ${result.passed 
-                ? "from-blue-900/40 to-purple-900/40 border-blue-700/30" 
-                : "from-red-900/30 to-orange-900/30 border-red-800/50"} 
-                p-6 rounded-xl border shadow-lg`}>
-                <div className="text-center mb-4">
-                  <span className={`inline-block w-16 h-16 bg-gradient-to-r ${
-                    result.passed 
-                      ? "from-blue-500 to-purple-500" 
-                      : "from-red-600 to-orange-600"
-                    } rounded-full text-white text-2xl font-bold leading-[4rem]`}>
-                    {result.passed ? "✓" : "!"}
-                  </span>
-                </div>
-                <h3 className={`text-xl font-bold text-center mb-3 text-transparent bg-clip-text bg-gradient-to-r ${
-                  result.passed 
-                    ? "from-blue-300 to-purple-300" 
-                    : "from-red-300 to-orange-300"}`}>
-                  {result.passed ? "Certification Achievement" : "Not Quite There Yet"}
-                </h3>
-                <p className="text-gray-300 text-center mb-6">
-                  {result.passed 
-                    ? "Your certificate is ready to be generated and downloaded." 
-                    : "You did not pass the certification. Keep learning and try again!"}
-                </p>
+          </div>
+        )}
+      </div>
+    );
+  }
 
-                <div className="flex flex-col sm:flex-row justify-center gap-4">
-                  {result.passed ? (
-                    <>
-                      <button
-                        onClick={openNameConfirmationDialog}
-                        disabled={isGeneratingCertificate}
-                        className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white px-6 py-3 rounded-lg text-lg font-semibold transition-all duration-300 transform hover:scale-105 flex items-center justify-center shadow-md disabled:opacity-70 disabled:hover:scale-100"
-                      >
-                        📄 Generate Certificate
-                      </button>
-                      <button
-                        onClick={() => setShowConfetti(true)}
-                        className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white px-6 py-3 rounded-lg text-lg font-semibold transition-all duration-300 transform hover:scale-105 flex items-center justify-center shadow-md"
-                      >
-                        🎉 Celebrate!
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={() => window.location.reload()}
-                      className="bg-gradient-to-r from-red-600 to-orange-500 hover:from-red-700 hover:to-orange-600 text-white px-8 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-md"
-                    >
-                      🔄 Try Again
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  );
+  // Return the existing JSX for category selection, loading, and result screens
+  // ...existing code...
 };
 
 export default Certifications;

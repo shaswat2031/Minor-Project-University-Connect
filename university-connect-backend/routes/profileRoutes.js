@@ -16,12 +16,20 @@ router.post("/setup", authMiddleware, async (req, res) => {
     let profile = await Profile.findOne({ user: userId });
 
     if (!profile) {
-      profile = new Profile({ user: userId, name, bio, skills, education, linkedin, instagram }); // Added linkedin and instagram
+      profile = new Profile({
+        user: userId,
+        name,
+        bio,
+        skills,
+        education,
+        linkedin,
+        instagram,
+      }); // Added linkedin and instagram
     } else {
       profile.name = name;
       profile.bio = bio;
       profile.skills = skills;
-      profile.education = education; // Optional field
+      profile.education = Array.isArray(education) ? education : []; // Ensure education is an array
       profile.linkedin = linkedin; // Added linkedin
       profile.instagram = instagram; // Added instagram
     }

@@ -5,13 +5,28 @@ const User = require("../models/User");
 
 const router = express.Router();
 
-// Register route remains the same
+// Register route
 router.post("/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res
+        .status(400)
+        .json({ message: "Please enter a valid email address" });
+    }
+
+    // Password validation
+    if (password.length < 6) {
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 6 characters long" });
     }
 
     const existingUser = await User.findOne({ email });
@@ -44,6 +59,13 @@ router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // Validate input
+    if (!email || !password) {
+      return res
+        .status(400)
+        .json({ message: "Email and password are required" });
+    }
+
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: "User not found" });
@@ -55,19 +77,16 @@ router.post("/login", async (req, res) => {
     }
 
     // Create and sign JWT token
-    const token = jwt.sign(
-      { id: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' }
-    );
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "24h",
+    });
 
     // Log the response for debugging
     const response = {
-      
       userId: user._id,
-      token:token,
+      token: token,
       name: user.name,
-      email: user.email
+      email: user.email,
     };
     console.log("Login Response:", response);
 

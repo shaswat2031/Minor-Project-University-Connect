@@ -1,39 +1,58 @@
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import React from "react";
 import { motion } from "framer-motion";
 import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim"; // Use slim version
-import React from "react";
+import PropTypes from "prop-types";
 
-const Login = () => {
+const Login = ({ setIsAuthenticated }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-  
+    setLoading(true);
+
     try {
-      const res = await axios.post("http://localhost:5000/api/auth/login", {
-        email,
-        password,
-      });
-  
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/auth/login`,
+        {
+          email,
+          password,
+        }
+      );
+
       console.log("Login Response:", res.data); // Debugging log
-  
+
       const token = res.data.token;
       if (!token) {
         throw new Error("Token not received from server");
       }
-  
+
       localStorage.setItem("token", token);
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          id: res.data.userId,
+          name: res.data.name,
+          email: res.data.email,
+        })
+      );
+
+      setIsAuthenticated(true);
       navigate("/");
-      window.location.reload();
     } catch (err) {
       console.error("Login Error:", err);
-      setError(err.response?.data?.message || "Login failed");
+      setError(
+        err.response?.data?.message || "Login failed. Please try again."
+      );
+    } finally {
+      setLoading(false);
     }
   };
   // Particle Background Settings
@@ -41,12 +60,12 @@ const Login = () => {
     try {
       console.log("Initializing tsparticles engine..."); // Corrected syntax
       if (engine && typeof engine.addShape === "function") {
-        await loadFull(engine); // Ensure compatibility with the latest version
+        await loadSlim(engine); // Use loadSlim instead of loadFull
       }
     } catch (error) {
       console.error("Error initializing tsparticles engine:", error);
     }
-  });
+  }, []);
   const particlesLoaded = useCallback((container) => {
     console.log("Particles loaded:", container);
   }, []);
@@ -59,15 +78,21 @@ const Login = () => {
       shape: { type: "circle" },
       opacity: { value: 0.7, random: true },
       size: { value: { min: 1, max: 4 }, random: true },
-      move: { 
-        enable: true, 
-        speed: { min: 0.5, max: 2.5 }, 
-        direction: "none", 
-        random: true, 
-        straight: false, 
-        outModes: { default: "out" } 
+      move: {
+        enable: true,
+        speed: { min: 0.5, max: 2.5 },
+        direction: "none",
+        random: true,
+        straight: false,
+        outModes: { default: "out" },
       },
-      links: { enable: true, distance: 130, color: "#00fffc", opacity: 0.6, width: 1 },
+      links: {
+        enable: true,
+        distance: 130,
+        color: "#00fffc",
+        opacity: 0.6,
+        width: 1,
+      },
     },
     interactivity: {
       events: {
@@ -88,7 +113,13 @@ const Login = () => {
       <div className="absolute inset-0 bg-gradient-to-br from-[#0a0f1d] via-[#141e30] to-[#0a0f1d] animate-gradient"></div>
 
       {/* Fullscreen Particles */}
-      <Particles id="tsparticles" init={particlesInit} options={particleOptions} className="absolute inset-0 w-full h-full" />
+      <Particles
+        id="tsparticles"
+        init={particlesInit}
+        loaded={particlesLoaded}
+        options={particleOptions}
+        className="absolute inset-0 w-full h-full"
+      />
 
       {/* Glowing Animated Rings */}
       <div className="absolute w-[500px] h-[500px] bg-[#00fffc]/20 blur-3xl rounded-full top-1/4 left-1/3 animate-pulse"></div>
@@ -101,7 +132,9 @@ const Login = () => {
         transition={{ duration: 0.6, ease: "easeOut" }}
         className="relative bg-[#131a2b]/80 p-8 rounded-xl shadow-2xl w-96 border border-[#00fffc] backdrop-blur-xl"
       >
-        <h2 className="text-3xl font-bold mb-4 text-center text-[#00fffc]">Login</h2>
+        <h2 className="text-3xl font-bold mb-4 text-center text-[#00fffc]">
+          Login
+        </h2>
         {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -128,16 +161,24 @@ const Login = () => {
             className="w-full bg-[#00fffc] text-[#0a0f1d] font-semibold p-3 rounded-md hover:bg-[#00e6e6] transition shadow-lg"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            disabled={loading}
           >
-            Login
+            {loading ? "Logging in..." : "Login"}
           </motion.button>
         </form>
         <p className="text-gray-400 text-sm text-center mt-4">
-          Don't have an account? <a href="/register" className="text-[#00fffc] hover:underline">Register</a>
+          Don&apos;t have an account?{" "}
+          <a href="/register" className="text-[#00fffc] hover:underline">
+            Register
+          </a>
         </p>
       </motion.div>
     </div>
   );
+};
+
+Login.propTypes = {
+  setIsAuthenticated: PropTypes.func.isRequired,
 };
 
 export default Login;
