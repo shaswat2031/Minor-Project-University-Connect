@@ -5,87 +5,102 @@ import PropTypes from "prop-types";
 import chatService from "../../services/chatService";
 
 const ChatWindow = ({ onClose }) => {
-  const [conversations, setConversations] = useState([]);
-  const [selectedChat, setSelectedChat] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [conversations, setConversations] = useState([]);
+  const [selectedConversation, setSelectedConversation] = useState(null);
   const [newMessage, setNewMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [typingUser, setTypingUser] = useState(null);
   const messagesEndRef = useRef(null);
-  const typingTimeoutRef = useRef(null);
-  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const currentUserId = localStorage.getItem("userId");
 
   useEffect(() => {
-    loadConversations();
+    // Connect to chat service
+    const token = localStorage.getItem("token");
+    if (token) {
+      chatService.connect(token);
 
-    // Listen for new messages
-    chatService.onMessage((message) => {
-      if (
-        selectedChat &&
-        (message.sender._id === selectedChat._id ||
-          message.receiver._id === selectedChat._id)
-      ) {
-        setMessages((prev) => [...prev, message]);
-      }
-    });
+      // Emit user online status
+      const userInfo = {
+        name: localStorage.getItem("userName") || "User",
+      };
+      chatService.emitUserOnline(userInfo);
 
-    // Listen for typing indicators
-    chatService.onTyping(({ senderId, isTyping }) => {
-      if (selectedChat && senderId === selectedChat._id) {
-        setIsTyping(isTyping);
-      }
-    });
-  }, [selectedChat]);
+      // Listen for new messages
+      chatService.onMessage((message) => {
+        if (message && message._id) {
+          setMessages((prev) => [...prev, message]);
+          scrollToBottom();
+        }
+      });
+
+      // Listen for typing indicators
+      chatService.onTyping((data) => {
+        if (
+          data &&
+          selectedConversation &&
+          data.senderId === selectedConversation.otherUser.id
+        ) {
+          setTypingUser(data.isTyping ? data.senderId : null);
+        }
+      });
+
+      fetchConversations();
+    }
+
+    return () => {
+      chatService.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (selectedConversation) {
+      fetchMessages(selectedConversation.otherUser.id);
+    }
+  }, [selectedConversation]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  const loadConversations = async () => {
+  const fetchConversations = async () => {
     try {
-      const convs = await chatService.getConversations();
-      setConversations(convs);
+      setIsLoading(true);
+      const conversationsData = await chatService.getConversations();
+      // Ensure conversationsData is an array
+      setConversations(
+        Array.isArray(conversationsData) ? conversationsData : []
+      );
     } catch (error) {
-      console.error("Error loading conversations:", error);
+      console.error("Error fetching conversations:", error);
+      setConversations([]);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const selectChat = async (conversation) => {
-    const otherUser = conversation.participants.find(
-      (p) => p._id !== currentUser.id
-    );
-    setSelectedChat(otherUser);
-
+  const fetchMessages = async (userId) => {
     try {
-      const msgs = await chatService.getMessages(otherUser._id);
-      setMessages(msgs);
+      const messagesData = await chatService.getMessages(userId);
+      // Ensure messagesData is an array
+      setMessages(Array.isArray(messagesData) ? messagesData : []);
+
+      // Mark messages as read
+      await chatService.markAsRead(userId);
     } catch (error) {
-      console.error("Error loading messages:", error);
+      console.error("Error fetching messages:", error);
+      setMessages([]);
     }
   };
 
-  const sendMessage = async (e) => {
-    e.preventDefault();
-    if (!newMessage.trim() || !selectedChat) return;
-
-    const messageContent = newMessage.trim();
-    setNewMessage("");
+  const sendMessage = () => {
+    if (!newMessage.trim() || !selectedConversation) return;
 
     try {
-      chatService.sendMessage(selectedChat._id, messageContent);
-
-      // Add message optimistically
-      const tempMessage = {
-        _id: Date.now(),
-        sender: currentUser,
-        receiver: selectedChat,
-        content: messageContent,
-        createdAt: new Date(),
-        isTemp: true,
-      };
-      setMessages((prev) => [...prev, tempMessage]);
+      chatService.sendMessage(selectedConversation.otherUser.id, newMessage);
+      setNewMessage("");
+      chatService.emitStopTyping(selectedConversation.otherUser.id);
     } catch (error) {
       console.error("Error sending message:", error);
     }
@@ -94,18 +109,21 @@ const ChatWindow = ({ onClose }) => {
   const handleTyping = (e) => {
     setNewMessage(e.target.value);
 
-    if (selectedChat) {
-      chatService.sendTyping(selectedChat._id);
+    if (selectedConversation && !isTyping) {
+      setIsTyping(true);
+      chatService.emitTyping(selectedConversation.otherUser.id);
 
-      // Clear previous timeout
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-
-      // Stop typing after 1 second of inactivity
-      typingTimeoutRef.current = setTimeout(() => {
-        chatService.stopTyping(selectedChat._id);
+      setTimeout(() => {
+        setIsTyping(false);
+        chatService.emitStopTyping(selectedConversation.otherUser.id);
       }, 1000);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
     }
   };
 
@@ -113,134 +131,120 @@ const ChatWindow = ({ onClose }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const formatTime = (timestamp) => {
-    return new Date(timestamp).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  if (isLoading) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.8 }}
+        className="fixed bottom-20 right-4 w-80 h-96 bg-gray-800 rounded-lg shadow-xl border border-gray-700 flex items-center justify-center"
+      >
+        <div className="text-white">Loading...</div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.8, y: 20 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.8, y: 20 }}
-      className="fixed bottom-20 right-6 w-96 h-96 bg-white rounded-lg shadow-2xl border border-gray-200 overflow-hidden z-50"
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.8 }}
+      className="fixed bottom-20 right-4 w-80 h-96 bg-gray-800 rounded-lg shadow-xl border border-gray-700 flex flex-col"
     >
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 flex items-center justify-between">
-        <h3 className="font-semibold">
-          {selectedChat ? selectedChat.name : "Messages"}
+      <div className="p-4 border-b border-gray-700 flex justify-between items-center">
+        <h3 className="text-white font-semibold">
+          {selectedConversation
+            ? selectedConversation.otherUser.name
+            : "Messages"}
         </h3>
-        <button
-          onClick={onClose}
-          className="text-white hover:text-gray-200 transition-colors"
-        >
-          <FaTimes />
+        <button onClick={onClose} className="text-gray-400 hover:text-white">
+          ✕
         </button>
       </div>
 
-      <div className="flex h-full">
+      <div className="flex-1 flex">
         {/* Conversations List */}
-        {!selectedChat && (
-          <div className="w-full bg-gray-50">
-            {loading ? (
-              <div className="p-4 text-center text-gray-500">Loading...</div>
-            ) : conversations.length === 0 ? (
-              <div className="p-4 text-center text-gray-500">
+        {!selectedConversation && (
+          <div className="w-full overflow-y-auto">
+            {conversations.length === 0 ? (
+              <div className="p-4 text-center text-gray-400">
                 No conversations yet
               </div>
             ) : (
-              <div className="overflow-y-auto h-full">
-                {conversations.map((conv) => {
-                  const otherUser = conv.participants.find(
-                    (p) => p._id !== currentUser.id
-                  );
-                  return (
-                    <div
-                      key={conv._id}
-                      onClick={() => selectChat(conv)}
-                      className="p-3 border-b border-gray-200 hover:bg-gray-100 cursor-pointer transition-colors"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white">
-                          <FaUser />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-gray-900 truncate">
-                            {otherUser?.name || "Unknown User"}
-                          </div>
-                          <div className="text-sm text-gray-500 truncate">
-                            {conv.lastMessage?.content || "No messages yet"}
-                          </div>
-                        </div>
-                      </div>
+              conversations.map((conversation) => (
+                <div
+                  key={conversation._id}
+                  onClick={() => setSelectedConversation(conversation)}
+                  className="p-3 border-b border-gray-700 cursor-pointer hover:bg-gray-700 transition"
+                >
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center mr-2 text-sm">
+                      {conversation.otherUser?.name?.charAt(0)?.toUpperCase() ||
+                        "?"}
                     </div>
-                  );
-                })}
-              </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-sm font-medium truncate">
+                        {conversation.otherUser?.name || "Unknown User"}
+                      </p>
+                      <p className="text-gray-400 text-xs truncate">
+                        {conversation.lastMessage?.content || "No messages"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))
             )}
           </div>
         )}
 
-        {/* Chat Messages */}
-        {selectedChat && (
-          <div className="flex flex-col w-full">
-            {/* Back button for mobile */}
-            <div className="p-2 border-b border-gray-200 bg-gray-50">
+        {/* Chat Window */}
+        {selectedConversation && (
+          <div className="flex-1 flex flex-col">
+            {/* Back button */}
+            <div className="p-2 border-b border-gray-700">
               <button
-                onClick={() => setSelectedChat(null)}
-                className="text-blue-500 hover:text-blue-600 text-sm"
+                onClick={() => setSelectedConversation(null)}
+                className="text-blue-400 hover:text-blue-300 text-sm"
               >
                 ← Back to conversations
               </button>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
-              {messages.map((message) => {
-                const isOwnMessage = message.sender._id === currentUser.id;
-                return (
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+              {Array.isArray(messages) &&
+                messages.map((message) => (
                   <div
                     key={message._id}
                     className={`flex ${
-                      isOwnMessage ? "justify-end" : "justify-start"
+                      message.sender._id === currentUserId
+                        ? "justify-end"
+                        : "justify-start"
                     }`}
                   >
                     <div
-                      className={`max-w-xs px-3 py-2 rounded-lg ${
-                        isOwnMessage
-                          ? "bg-blue-500 text-white"
-                          : "bg-white text-gray-800 border border-gray-200"
+                      className={`max-w-xs px-3 py-2 rounded-lg text-sm ${
+                        message.sender._id === currentUserId
+                          ? "bg-blue-600 text-white"
+                          : "bg-gray-700 text-white"
                       }`}
                     >
-                      <div className="text-sm">{message.content}</div>
-                      <div
-                        className={`text-xs mt-1 ${
-                          isOwnMessage ? "text-blue-100" : "text-gray-500"
-                        }`}
-                      >
-                        {formatTime(message.createdAt)}
-                      </div>
+                      <p>{message.content}</p>
+                      <p className="text-xs opacity-75 mt-1">
+                        {new Date(message.createdAt).toLocaleTimeString()}
+                      </p>
                     </div>
                   </div>
-                );
-              })}
+                ))}
 
-              {/* Typing indicator */}
-              {isTyping && (
+              {typingUser && (
                 <div className="flex justify-start">
-                  <div className="bg-gray-200 px-3 py-2 rounded-lg">
+                  <div className="bg-gray-700 px-3 py-2 rounded-lg">
                     <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                      <div
-                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                        style={{ animationDelay: "0.1s" }}
-                      ></div>
-                      <div
-                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                        style={{ animationDelay: "0.2s" }}
-                      ></div>
+                      <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"></div>
+                      <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce delay-100"></div>
+                      <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce delay-200"></div>
                     </div>
                   </div>
                 </div>
@@ -250,33 +254,32 @@ const ChatWindow = ({ onClose }) => {
             </div>
 
             {/* Message Input */}
-            <form
-              onSubmit={sendMessage}
-              className="p-3 border-t border-gray-200 bg-white"
-            >
+            <div className="p-3 border-t border-gray-700">
               <div className="flex space-x-2">
                 <input
                   type="text"
                   value={newMessage}
                   onChange={handleTyping}
+                  onKeyPress={handleKeyPress}
                   placeholder="Type a message..."
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 px-3 py-2 bg-gray-700 text-white rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
                 <button
-                  type="submit"
+                  onClick={sendMessage}
                   disabled={!newMessage.trim()}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <FaPaperPlane />
+                  Send
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         )}
       </div>
     </motion.div>
   );
 };
+
 ChatWindow.propTypes = {
   onClose: PropTypes.func.isRequired,
 };

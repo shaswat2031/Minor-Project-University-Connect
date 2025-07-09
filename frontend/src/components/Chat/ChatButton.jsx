@@ -7,37 +7,43 @@ import chatService from "../../services/chatService";
 const ChatButton = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // Connect to chat service
-    chatService.connect();
+    // Only fetch unread count if user is authenticated
+    const token = localStorage.getItem("token");
+    if (token) {
+      fetchUnreadCount();
+    }
+  }, []);
 
-    // Get initial unread count
-    const fetchUnreadCount = async () => {
+  const fetchUnreadCount = async () => {
+    try {
+      setIsLoading(true);
       const count = await chatService.getUnreadCount();
-      setUnreadCount(count);
-    };
-
-    fetchUnreadCount();
-
-    // Listen for new messages
-    chatService.onMessage((message) => {
-      if (!isOpen) {
-        setUnreadCount((prev) => prev + 1);
-      }
-    });
-
-    return () => {
-      chatService.disconnect();
-    };
-  }, [isOpen]);
+      setUnreadCount(count || 0);
+    } catch (error) {
+      console.error("Error fetching unread count:", error);
+      setUnreadCount(0);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const toggleChat = () => {
     setIsOpen(!isOpen);
+
+    // Reset unread count when opening chat
     if (!isOpen) {
       setUnreadCount(0);
     }
   };
+
+  // Don't render if no token
+  const token = localStorage.getItem("token");
+  if (!token) {
+    return null;
+  }
 
   return (
     <>

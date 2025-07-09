@@ -19,11 +19,27 @@ const Login = ({ setIsAuthenticated }) => {
     setLoading(true);
 
     try {
+      console.log(
+        "Attempting login to:",
+        `${import.meta.env.VITE_API_URL}/api/auth/login`
+      );
+      console.log("Environment variables:", {
+        VITE_API_URL: import.meta.env.VITE_API_URL,
+        MODE: import.meta.env.MODE,
+        DEV: import.meta.env.DEV,
+      });
+
       const res = await axios.post(
         `${import.meta.env.VITE_API_URL}/api/auth/login`,
         {
           email,
           password,
+        },
+        {
+          timeout: 10000, // 10 second timeout
+          headers: {
+            "Content-Type": "application/json",
+          },
         }
       );
 
@@ -35,6 +51,8 @@ const Login = ({ setIsAuthenticated }) => {
       }
 
       localStorage.setItem("token", token);
+      localStorage.setItem("userId", res.data.userId);
+      localStorage.setItem("userName", res.data.name);
       localStorage.setItem(
         "user",
         JSON.stringify({
@@ -48,9 +66,24 @@ const Login = ({ setIsAuthenticated }) => {
       navigate("/");
     } catch (err) {
       console.error("Login Error:", err);
-      setError(
-        err.response?.data?.message || "Login failed. Please try again."
-      );
+
+      let errorMessage = "Login failed. Please try again.";
+
+      if (err.code === "ERR_NETWORK" || err.message === "Network Error") {
+        errorMessage =
+          "Cannot connect to server. Please ensure the backend server is running on port 5000.";
+        console.error("Network error - server might not be running");
+      } else if (err.code === "ECONNREFUSED") {
+        errorMessage = "Connection refused. Please start the backend server.";
+      } else if (err.response) {
+        errorMessage =
+          err.response.data?.message || `Server error: ${err.response.status}`;
+      } else if (err.request) {
+        errorMessage =
+          "No response from server. Please check if the backend is running.";
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

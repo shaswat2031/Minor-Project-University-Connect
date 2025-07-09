@@ -8,15 +8,23 @@ const router = express.Router();
 // Register route
 router.post("/register", async (req, res) => {
   try {
+    console.log("Registration request received:", {
+      name: req.body.name,
+      email: req.body.email,
+      hasPassword: !!req.body.password,
+    });
+
     const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
+      console.log("Missing required fields");
       return res.status(400).json({ message: "All fields are required" });
     }
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
+      console.log("Invalid email format:", email);
       return res
         .status(400)
         .json({ message: "Please enter a valid email address" });
@@ -24,20 +32,27 @@ router.post("/register", async (req, res) => {
 
     // Password validation
     if (password.length < 6) {
+      console.log("Password too short");
       return res
         .status(400)
         .json({ message: "Password must be at least 6 characters long" });
     }
 
+    console.log("Checking if user already exists...");
     const existingUser = await User.findOne({ email });
     if (existingUser) {
+      console.log("User already exists with email:", email);
       return res.status(400).json({ message: "User already exists" });
     }
 
+    console.log("Hashing password...");
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    console.log("Creating new user...");
     const newUser = new User({ name, email, password: hashedPassword });
     await newUser.save();
+
+    console.log("User created successfully:", newUser._id);
 
     // Return the newly created user's details (excluding password)
     res.status(201).json({
@@ -50,7 +65,21 @@ router.post("/register", async (req, res) => {
     });
   } catch (error) {
     console.error("Error registering user:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+
+    // Handle specific MongoDB errors
+    if (error.code === 11000) {
+      return res.status(400).json({ message: "Email already exists" });
+    }
+
+    if (error.name === "ValidationError") {
+      const messages = Object.values(error.errors).map((err) => err.message);
+      return res.status(400).json({ message: messages.join(", ") });
+    }
+
+    res.status(500).json({
+      message: "Internal Server Error",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
   }
 });
 

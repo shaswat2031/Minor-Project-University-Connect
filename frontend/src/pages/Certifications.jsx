@@ -154,23 +154,98 @@ const Certifications = () => {
     setAnswers((prev) => ({ ...prev, [index]: answer }));
   };
 
+  // Updated fetchQuestions function to get mixed MCQ and coding questions
+  const fetchQuestions = async (category) => {
+    setLoading(true);
+    try {
+      console.log("Fetching questions for category:", category);
+
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/certification/questions`, // Fixed: removed 's' from certifications
+        {
+          params: { category },
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+
+      console.log("Questions received:", response.data);
+
+      if (!response.data || response.data.length === 0) {
+        alert(
+          `No questions available for ${category}. Please contact admin to add questions.`
+        );
+        setSelectedCategory(""); // Go back to category selection
+        return;
+      }
+
+      setQuestions(response.data);
+      setAnswers({}); // Reset answers as object
+      setCurrentQuestion(0);
+      setTestStarted(true);
+      setTimeRemaining(1800); // Reset timer to 30 minutes
+      setExamStarted(true);
+    } catch (error) {
+      console.error("Error fetching questions:", error);
+
+      // More detailed error handling
+      if (error.response) {
+        // Server responded with error status
+        const message =
+          error.response.data?.message || "Failed to fetch questions";
+        alert(`Error: ${message}`);
+      } else if (error.request) {
+        // Request was made but no response received
+        alert(
+          "Network error: Unable to connect to server. Please check your connection."
+        );
+      } else {
+        // Something else happened
+        alert("An unexpected error occurred. Please try again.");
+      }
+
+      setSelectedCategory(""); // Go back to category selection
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async () => {
     try {
+      console.log("Starting submission...");
+
       const token = localStorage.getItem("token");
       if (!token) {
         window.location.href = "/login";
         return;
       }
 
-      let userId = localStorage.getItem("userId");
-      let userName = localStorage.getItem("userName");
+      // Get user ID from token payload instead of localStorage
+      let userId, userName;
 
-      if (!userId || !userName) {
-        const userProfile = await fetchUserProfile();
-        userId = userProfile._id;
-        userName = userProfile.name;
-        localStorage.setItem("userId", userId);
-        localStorage.setItem("userName", userName);
+      try {
+        const tokenPayload = JSON.parse(atob(token.split(".")[1]));
+        userId = tokenPayload.id;
+        console.log("User ID from token:", userId);
+
+        // Get user name from localStorage or profile
+        userName = localStorage.getItem("userName");
+
+        if (!userName) {
+          const userProfile = await fetchUserProfile(token);
+          userName = userProfile.name || "User";
+          localStorage.setItem("userName", userName);
+        }
+      } catch (tokenError) {
+        console.error("Error decoding token:", tokenError);
+        // Fallback to localStorage values
+        userId = localStorage.getItem("userId");
+        userName = localStorage.getItem("userName") || "User";
+      }
+
+      if (!userId) {
+        alert("User authentication error. Please login again.");
+        window.location.href = "/login";
+        return;
       }
 
       if (Object.keys(answers).length < questions.length) {
@@ -178,46 +253,34 @@ const Certifications = () => {
         return;
       }
 
-      setShowResult(true);
-
-      // Calculate score for MCQ questions only
-      let correctCount = 0;
-      questions.forEach((q, index) => {
-        if (q.type === "mcq" && answers[index] === q.correctAnswer) {
-          correctCount++;
-        }
-      });
-
-      setScore(correctCount);
-      const mcqQuestions = questions.filter((q) => q.type === "mcq");
-      const percentage =
-        mcqQuestions.length > 0
-          ? (correctCount / mcqQuestions.length) * 100
-          : 0;
-      const passed = percentage >= 65;
-
-      // For coding questions, we need to send the code as answer
-      const formattedAnswers = questions.map((q, index) => {
-        if (q.type === "coding") {
-          return answers[index] || ""; // Send code for coding questions
-        }
-        return answers[index] || ""; // For MCQ, send the selected answer
-      });
-
-      const res = await submitCertificationAnswers(
+      console.log("Submitting with:", {
         userId,
         userName,
-        selectedCategory,
-        formattedAnswers
+        category: selectedCategory,
+        answersCount: Object.keys(answers).length,
+        totalQuestions: questions.length,
+      });
+
+      setShowResult(true);
+
+      // Submit to backend
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/certification/submit`,
+        {
+          userId,
+          userName,
+          category: selectedCategory,
+          answers,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 30000,
+        }
       );
 
-      setResult({
-        ...res,
-        passed,
-        score: correctCount,
-        totalQuestions: questions.length,
-        percentage,
-      });
+      console.log("Submission successful:", response.data);
+      setResult(response.data);
+      setScore(response.data.score);
 
       localStorage.removeItem("certificationAnswers");
 
@@ -227,14 +290,36 @@ const Certifications = () => {
         });
       }
 
-      if (passed) {
+      if (response.data.passed) {
         setShowConfetti(true);
       }
     } catch (error) {
       console.error("Error submitting answers:", error);
-      alert(
-        "An error occurred while submitting your answers. Please try again."
-      );
+
+      let errorMessage = "An error occurred while submitting your answers.";
+
+      if (error.response) {
+        // Server responded with error status
+        console.error("Server error response:", error.response.data);
+        errorMessage =
+          error.response.data?.message ||
+          `Server error: ${error.response.status}`;
+
+        if (error.response.data?.details) {
+          console.error("Error details:", error.response.data.details);
+        }
+      } else if (error.request) {
+        // Request was made but no response received
+        console.error("Network error:", error.request);
+        errorMessage = "Network error: Unable to connect to server.";
+      } else {
+        // Something else happened
+        console.error("Submission error:", error.message);
+        errorMessage = error.message;
+      }
+
+      alert(errorMessage + " Please try again.");
+      setShowResult(false); // Allow user to try again
     }
   };
 
@@ -399,60 +484,6 @@ const Certifications = () => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds < 10 ? "0" : ""}${remainingSeconds}`;
-  };
-
-  // Updated fetchQuestions function to get mixed MCQ and coding questions
-  const fetchQuestions = async (category) => {
-    setLoading(true);
-    try {
-      // Fetch both MCQ and coding questions for the category
-      const [mcqResponse, codingResponse] = await Promise.all([
-        axios.get(`${import.meta.env.VITE_API_URL}/api/admin/mcq`, {
-          params: { category, limit: 15 }, // Get 15 MCQ questions
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }),
-        axios.get(`${import.meta.env.VITE_API_URL}/api/admin/coding`, {
-          params: { category, limit: 15 }, // Get 15 coding questions
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }),
-      ]);
-
-      const mcqQuestions = mcqResponse.data.questions || [];
-      const codingQuestions = codingResponse.data.questions || [];
-
-      // Add type property to distinguish between MCQ and coding questions
-      const formattedMcqQuestions = mcqQuestions.map((q) => ({
-        ...q,
-        type: "mcq",
-      }));
-
-      const formattedCodingQuestions = codingQuestions.map((q) => ({
-        ...q,
-        type: "coding",
-      }));
-
-      // Combine and shuffle questions
-      const allQuestions = [
-        ...formattedMcqQuestions,
-        ...formattedCodingQuestions,
-      ];
-      const shuffledQuestions = allQuestions.sort(() => Math.random() - 0.5);
-
-      // Take only 30 questions total
-      const selectedQuestions = shuffledQuestions.slice(0, 30);
-
-      setQuestions(selectedQuestions);
-      setAnswers({}); // Reset answers as object
-      setCurrentQuestion(0);
-      setTestStarted(true);
-      setTimeRemaining(1800); // Reset timer to 30 minutes
-      setExamStarted(true);
-    } catch (error) {
-      console.error("Error fetching questions:", error);
-      alert("Failed to fetch questions. Please try again.");
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleAnswerSelect = (answer) => {

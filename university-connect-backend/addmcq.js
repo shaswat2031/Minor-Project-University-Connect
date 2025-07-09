@@ -498,6 +498,15 @@ const webDevelopmentQuestions = [
 
 const addQuestionsToDatabase = async () => {
   try {
+    // Check if MONGODB_URI is defined
+    if (!process.env.MONGODB_URI) {
+      console.error("❌ MONGODB_URI environment variable is not defined");
+      console.log("Please check your .env file and ensure MONGODB_URI is set");
+      process.exit(1);
+    }
+
+    console.log("🔄 Attempting to connect to MongoDB...");
+
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
@@ -506,8 +515,8 @@ const addQuestionsToDatabase = async () => {
     console.log("✅ Connected to MongoDB");
 
     // Clear existing questions
-    await Question.deleteMany({});
-    console.log("🗑️ Cleared existing questions");
+    const deletedCount = await Question.deleteMany({});
+    console.log(`🗑️ Cleared ${deletedCount.deletedCount} existing questions`);
 
     // Add new questions for all categories
     const allQuestions = [
@@ -520,9 +529,8 @@ const addQuestionsToDatabase = async () => {
       ...webDevelopmentQuestions,
     ];
 
-    await Question.insertMany(allQuestions);
-
-    console.log(`✅ Added ${allQuestions.length} questions to database`);
+    const insertResult = await Question.insertMany(allQuestions);
+    console.log(`✅ Added ${insertResult.length} questions to database`);
 
     // Show breakdown by category
     const categories = [
@@ -534,16 +542,27 @@ const addQuestionsToDatabase = async () => {
       "Algorithms",
       "Web Development",
     ];
+
+    console.log("\n📊 Questions by Category:");
     for (const category of categories) {
       const count = await Question.countDocuments({ category });
-      console.log(`📊 ${category}: ${count} questions`);
+      console.log(`   ${category}: ${count} questions`);
     }
 
+    console.log("\n🎉 Database seeding completed successfully!");
     mongoose.connection.close();
   } catch (error) {
-    console.error("❌ Error:", error);
+    console.error("❌ Error:", error.message);
+    if (error.code === "ENOTFOUND") {
+      console.log("💡 Tip: Check your internet connection and MongoDB URI");
+    }
     process.exit(1);
   }
 };
 
-addQuestionsToDatabase();
+// Only run if this file is executed directly
+if (require.main === module) {
+  addQuestionsToDatabase();
+}
+
+module.exports = { addQuestionsToDatabase };

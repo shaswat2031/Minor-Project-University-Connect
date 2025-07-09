@@ -7,88 +7,213 @@ class ChatService {
   constructor() {
     this.socket = null;
     this.isConnected = false;
+    this.reconnectAttempts = 0;
+    this.maxReconnectAttempts = 3;
+    this.eventListeners = new Map();
   }
 
-  // Initialize socket connection
-  connect() {
-    const token = localStorage.getItem("token");
-    if (!token || this.isConnected) return;
+  // Initialize socket connection with proper management
+  connect(token) {
+    // Prevent multiple connections
+    if (this.socket && this.isConnected) {
+      console.log("Socket already connected");
+      return this.socket;
+    }
 
-    this.socket = io(import.meta.env.VITE_API_URL, {
-      auth: { token },
-    });
+    // Disconnect existing socket if any
+    if (this.socket) {
+      this.disconnect();
+    }
+
+    const authToken = token || localStorage.getItem("token");
+    if (!authToken) {
+      console.error("No token available for socket connection");
+      return null;
+    }
+
+    try {
+      this.socket = io(import.meta.env.VITE_API_URL, {
+        auth: { token: authToken },
+        transports: ["websocket", "polling"],
+        reconnection: true,
+        reconnectionAttempts: this.maxReconnectAttempts,
+        reconnectionDelay: 1000,
+        timeout: 10000,
+      });
+
+      this.setupSocketEventListeners();
+      return this.socket;
+    } catch (error) {
+      console.error("Error creating socket connection:", error);
+      return null;
+    }
+  }
+
+  setupSocketEventListeners() {
+    if (!this.socket) return;
 
     this.socket.on("connect", () => {
       console.log("Connected to chat server");
       this.isConnected = true;
+      this.reconnectAttempts = 0;
     });
 
-    this.socket.on("disconnect", () => {
-      console.log("Disconnected from chat server");
+    this.socket.on("disconnect", (reason) => {
+      console.log("Disconnected from chat server:", reason);
       this.isConnected = false;
     });
 
-    return this.socket;
+    this.socket.on("connect_error", (error) => {
+      console.error("Socket connection error:", error.message);
+      this.isConnected = false;
+      this.reconnectAttempts++;
+
+      if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+        console.error("Max reconnection attempts reached");
+        this.disconnect();
+      }
+    });
+
+    this.socket.on("reconnect", (attemptNumber) => {
+      console.log(`Reconnected after ${attemptNumber} attempts`);
+      this.isConnected = true;
+      this.reconnectAttempts = 0;
+    });
   }
 
-  // Disconnect socket
+  // Disconnect socket with cleanup
   disconnect() {
     if (this.socket) {
+      this.socket.removeAllListeners();
       this.socket.disconnect();
       this.socket = null;
       this.isConnected = false;
+      this.reconnectAttempts = 0;
+      this.eventListeners.clear();
+      console.log("Socket disconnected and cleaned up");
     }
   }
 
-  // Send message via socket
+  // Check if connected
+  isSocketConnected() {
+    return this.socket && this.isConnected;
+  }
+
+  // Send message via socket with fallback
   sendMessage(receiverId, content, messageType = "text") {
-    if (this.socket && this.isConnected) {
+    if (!receiverId || !content) {
+      console.error("Missing receiverId or content");
+      return Promise.reject(new Error("Missing required fields"));
+    }
+
+    if (this.isSocketConnected()) {
       this.socket.emit("send-message", {
         receiverId,
         content,
         messageType,
       });
+      return Promise.resolve();
+    } else {
+      console.warn("Socket not connected, using HTTP fallback");
+      return this.sendMessageHTTP(receiverId, content, messageType);
     }
   }
 
-  // Listen for incoming messages
+  // Listen for incoming messages with proper cleanup
   onMessage(callback) {
     if (this.socket) {
+      // Remove existing listener to prevent duplicates
+      this.socket.off("receive-message");
       this.socket.on("receive-message", callback);
+      this.eventListeners.set("receive-message", callback);
+    }
+  }
+
+  // Listen for message sent confirmation
+  onMessageSent(callback) {
+    if (this.socket) {
+      this.socket.off("message-sent");
+      this.socket.on("message-sent", callback);
+      this.eventListeners.set("message-sent", callback);
+    }
+  }
+
+  // Listen for message errors
+  onMessageError(callback) {
+    if (this.socket) {
+      this.socket.off("message-error");
+      this.socket.on("message-error", callback);
+      this.eventListeners.set("message-error", callback);
     }
   }
 
   // Listen for typing indicators
   onTyping(callback) {
     if (this.socket) {
+      this.socket.off("user-typing");
       this.socket.on("user-typing", callback);
+      this.eventListeners.set("user-typing", callback);
     }
   }
 
-  // Send typing indicator
-  sendTyping(receiverId) {
-    if (this.socket && this.isConnected) {
+  // Emit typing indicator
+  emitTyping(receiverId) {
+    if (this.isSocketConnected() && receiverId) {
       this.socket.emit("typing", { receiverId });
     }
   }
 
-  // Stop typing indicator
-  stopTyping(receiverId) {
-    if (this.socket && this.isConnected) {
+  // Emit stop typing indicator
+  emitStopTyping(receiverId) {
+    if (this.isSocketConnected() && receiverId) {
       this.socket.emit("stop-typing", { receiverId });
     }
   }
 
-  // Get conversations
+  // Emit user online status
+  emitUserOnline(userInfo) {
+    if (this.isSocketConnected() && userInfo) {
+      this.socket.emit("user-online", userInfo);
+    }
+  }
+
+  // Listen for online users
+  onOnlineUsers(callback) {
+    if (this.socket) {
+      this.socket.off("online-users-list");
+      this.socket.on("online-users-list", callback);
+      this.eventListeners.set("online-users-list", callback);
+    }
+  }
+
+  // Listen for user status changes
+  onUserStatusChange(callback) {
+    if (this.socket) {
+      this.socket.off("user-status-change");
+      this.socket.on("user-status-change", callback);
+      this.eventListeners.set("user-status-change", callback);
+    }
+  }
+
+  // Get conversations with better error handling
   async getConversations() {
     try {
       const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("No authentication token");
+      }
+
       const response = await axios.get(`${API_BASE_URL}/conversations`, {
         headers: { Authorization: `Bearer ${token}` },
+        timeout: 10000,
       });
-      return response.data;
+      return Array.isArray(response.data) ? response.data : [];
     } catch (error) {
       console.error("Error fetching conversations:", error);
+      if (error.response?.status === 401) {
+        localStorage.removeItem("token");
+        window.location.href = "/login";
+      }
       return [];
     }
   }
@@ -97,15 +222,28 @@ class ChatService {
   async getMessages(otherUserId) {
     try {
       const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("No authentication token");
+      }
+
+      if (!otherUserId) {
+        throw new Error("No user ID provided");
+      }
+
       const response = await axios.get(
         `${API_BASE_URL}/messages/${otherUserId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
+          timeout: 10000,
         }
       );
-      return response.data;
+      return Array.isArray(response.data) ? response.data : [];
     } catch (error) {
       console.error("Error fetching messages:", error);
+      if (error.response?.status === 401) {
+        localStorage.removeItem("token");
+        window.location.href = "/login";
+      }
       return [];
     }
   }
@@ -114,6 +252,10 @@ class ChatService {
   async sendMessageHTTP(receiverId, content, messageType = "text") {
     try {
       const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("No authentication token");
+      }
+
       const response = await axios.post(
         `${API_BASE_URL}/send`,
         {
@@ -123,6 +265,7 @@ class ChatService {
         },
         {
           headers: { Authorization: `Bearer ${token}` },
+          timeout: 10000,
         }
       );
       return response.data;
@@ -136,15 +279,40 @@ class ChatService {
   async getUnreadCount() {
     try {
       const token = localStorage.getItem("token");
+      if (!token) {
+        return 0;
+      }
+
       const response = await axios.get(`${API_BASE_URL}/unread-count`, {
         headers: { Authorization: `Bearer ${token}` },
+        timeout: 5000,
       });
-      return response.data.unreadCount;
+      return response.data.unreadCount || 0;
     } catch (error) {
       console.error("Error fetching unread count:", error);
       return 0;
     }
   }
+
+  // Mark messages as read
+  async markAsRead(otherUserId) {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token || !otherUserId) return;
+
+      await axios.put(
+        `${API_BASE_URL}/mark-read/${otherUserId}`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 5000,
+        }
+      );
+    } catch (error) {
+      console.error("Error marking messages as read:", error);
+    }
+  }
 }
 
+// Export singleton instance
 export default new ChatService();

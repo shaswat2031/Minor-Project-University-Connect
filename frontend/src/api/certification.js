@@ -17,12 +17,27 @@ export const fetchCertificationQuestions = async (category = "React") => {
 
 export const fetchUserProfile = async (token) => {
   try {
+    const authToken = token || localStorage.getItem("token");
     const response = await axios.get(`${USER_API_URL}/profile`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${authToken}` },
     });
     return response.data;
   } catch (error) {
     console.error("Error fetching user profile:", error);
+
+    // Try to decode user info from token as fallback
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        return {
+          _id: payload.id,
+          name: "User", // Default name
+        };
+      } catch (decodeError) {
+        console.error("Error decoding token:", decodeError);
+      }
+    }
+
     throw error;
   }
 };
@@ -54,12 +69,72 @@ export const submitCertificationAnswers = async (
   }
 };
 
+// Fetch user certifications
 export const fetchUserCertifications = async (userId) => {
   try {
-    const response = await axios.get(`${API_URL}/${userId}`);
+    const response = await axios.get(
+      `${import.meta.env.VITE_API_URL}/api/certification/user/${userId}`,
+      {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      }
+    );
     return response.data;
   } catch (error) {
-    console.error("Error fetching certifications:", error);
+    console.error("Error fetching user certifications:", error);
     throw error;
   }
+};
+
+// Fetch current user's certifications
+export const fetchMyCertifications = async () => {
+  try {
+    const response = await axios.get(
+      `${import.meta.env.VITE_API_URL}/api/certification/my-certifications`,
+      {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching my certifications:", error);
+    throw error;
+  }
+};
+
+// Fetch certification leaderboard
+export const fetchCertificationLeaderboard = async () => {
+  try {
+    const response = await axios.get(
+      `${import.meta.env.VITE_API_URL}/api/certification/leaderboard`,
+      {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching leaderboard:", error);
+    throw error;
+  }
+};
+
+// Get badge color helper
+export const getBadgeColor = (badgeType) => {
+  const colors = {
+    bronze: "text-orange-400",
+    silver: "text-gray-400",
+    gold: "text-yellow-400",
+    platinum: "text-purple-400",
+  };
+  return colors[badgeType] || "text-gray-400";
+};
+
+// Get badge emoji helper
+export const getBadgeEmoji = (badgeType) => {
+  const emojis = {
+    bronze: "🥉",
+    silver: "🥈",
+    gold: "🥇",
+    platinum: "💎",
+  };
+  return emojis[badgeType] || "🏅";
 };

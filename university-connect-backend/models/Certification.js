@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const certificateSchema = new mongoose.Schema(
+const certificationSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -73,7 +73,7 @@ const certificateSchema = new mongoose.Schema(
 );
 
 // Calculate badge type based on percentage
-certificateSchema.methods.calculateBadgeType = function () {
+certificationSchema.methods.calculateBadgeType = function () {
   if (this.percentage >= 95) {
     this.badgeType = "platinum";
   } else if (this.percentage >= 85) {
@@ -86,4 +86,15 @@ certificateSchema.methods.calculateBadgeType = function () {
   return this.badgeType;
 };
 
-module.exports = mongoose.model("Certificate", certificateSchema);
+// Generate certificate ID before saving
+certificationSchema.pre("save", function (next) {
+  if (!this.certificateId) {
+    this.certificateId = `UC-${Math.floor(
+      100000 + Math.random() * 900000
+    )}-${new Date().getFullYear()}`;
+  }
+  this.calculateBadgeType();
+  next();
+});
+
+module.exports = mongoose.model("Certification", certificationSchema);

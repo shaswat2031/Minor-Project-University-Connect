@@ -9,34 +9,86 @@ const Register = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+
+    console.log("Registration attempt with:", { name, email, password: "***" });
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
     setLoading(true);
+    setError("");
 
     try {
-      const res = await axios.post(
+      console.log(
+        "Sending registration request to:",
+        `${import.meta.env.VITE_API_URL}/api/auth/register`
+      );
+
+      const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/api/auth/register`,
         {
           name,
           email,
           password,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          timeout: 10000, // 10 second timeout
         }
       );
 
-      if (res.status === 201) {
-        alert("Registration successful. Please login.");
-        navigate("/login");
-      }
-    } catch (err) {
-      console.error("Registration Error:", err);
-      setError(
-        err.response?.data?.message || "Registration failed. Please try again."
+      console.log("Registration successful:", response.data);
+
+      // Registration successful
+      setSuccess(
+        "Registration successful! Please login with your credentials."
       );
+
+      // Clear form
+      setName("");
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
+
+      // Redirect to login after 2 seconds
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
+    } catch (error) {
+      console.error("Registration error:", error);
+
+      let errorMessage = "Registration failed. Please try again.";
+
+      if (error.response) {
+        // Server responded with error status
+        console.error("Server error response:", error.response.data);
+        errorMessage =
+          error.response.data?.message ||
+          `Server error: ${error.response.status}`;
+      } else if (error.request) {
+        // Request was made but no response received
+        console.error("Network error:", error.request);
+        errorMessage =
+          "Network error: Unable to connect to server. Please check your connection.";
+      } else {
+        // Something else happened
+        console.error("Request setup error:", error.message);
+        errorMessage = error.message;
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -121,6 +173,9 @@ const Register = () => {
           Register
         </h2>
         {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+        {success && (
+          <p className="text-green-500 text-sm text-center">{success}</p>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <motion.input
@@ -147,6 +202,15 @@ const Register = () => {
             className="w-full p-3 border border-[#00fffc] bg-transparent text-white rounded-md focus:outline-none focus:ring-2 focus:ring-[#00fffc]"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            required
+            whileFocus={{ scale: 1.05 }}
+          />
+          <motion.input
+            type="password"
+            placeholder="Confirm Password"
+            className="w-full p-3 border border-[#00fffc] bg-transparent text-white rounded-md focus:outline-none focus:ring-2 focus:ring-[#00fffc]"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
             required
             whileFocus={{ scale: 1.05 }}
           />

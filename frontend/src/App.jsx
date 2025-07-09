@@ -15,11 +15,12 @@ import StudentConnect from "./pages/StudentConnect";
 import Certifications from "./pages/Certifications";
 import TalentMarketplace from "./pages/TalentMarketplace";
 import ProfileSetup from "./pages/ProfileSetup";
-import Footer from "./components/Footer"; // Removed unused import
-import UserProfile from "./pages/UserProfile"; // Import the UserProfile component
-import ProfilePage from "./pages/ProfilePage"; // Import the ProfilePage component
-import MyProfile from "./pages/MyProfile"; // Import the MyProfile component
-import Privacy from "./pages/Privacy"; // Import the Privacy component
+import Footer from "./components/Footer";
+import UserProfile from "./pages/UserProfile";
+import ProfilePage from "./pages/ProfilePage";
+import MyProfile from "./pages/MyProfile";
+import Privacy from "./pages/Privacy";
+import Messages from "./pages/Messages"; // Import Messages component
 import ChatButton from "./components/Chat/ChatButton";
 import AdminPanel from "./pages/AdminPanel";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
@@ -73,9 +74,16 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/messages"
+            element={
+              <ProtectedRoute>
+                <Messages />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/profile-setup" element={<ProfileSetup />} />
-          <Route path="/profile/:id" element={<ProfilePage />} />{" "}
-          {/* Add this route */}
+          <Route path="/profile/:id" element={<ProfilePage />} />
           <Route
             path="/certifications"
             element={
@@ -92,9 +100,8 @@ const App = () => {
               </ProtectedRoute>
             }
           />
-          <Route path="/profile" element={<UserProfile />} />{" "}
-          {/* Add this route */}
-          <Route path="/privacy" element={<Privacy />} /> {/* Add this route */}
+          <Route path="/profile" element={<UserProfile />} />
+          <Route path="/privacy" element={<Privacy />} />
           {/* Admin protected route */}
           <Route
             path="/admin"
