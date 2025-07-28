@@ -12,12 +12,11 @@
     "clean": "npm ci --production",
     "build": "npm ci --production",
     "preflight": "node preflight.js",
-    "postinstall": "echo 'Dependencies installed successfully'"
+    "postinstall": "npm rebuild"
   },
   "dependencies": {
     "axios": "^1.6.0",
     "bcrypt": "^5.1.1",
-    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
@@ -28,6 +27,7 @@
     "vm2": "^3.9.19"
   },
   "devDependencies": {
+    "node-pre-gyp": "^0.17.0",
     "nodemon": "^3.0.1"
   },
   "engines": {
