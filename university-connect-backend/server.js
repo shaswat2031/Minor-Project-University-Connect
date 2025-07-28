@@ -8,12 +8,20 @@ const http = require("http");
 const socketIo = require("socket.io");
 const jwt = require("jsonwebtoken");
 
-// Import models at the top
-const Message = require("./models/Message");
-const Conversation = require("./models/Conversation");
-const User = require("./models/User");
-
+// Load environment variables first
 dotenv.config();
+
+// Import models at the top with error handling
+let Message, Conversation, User;
+try {
+  Message = require("./models/Message");
+  Conversation = require("./models/Conversation");
+  User = require("./models/User");
+  console.log("✅ Models loaded successfully");
+} catch (error) {
+  console.error("❌ Failed to load models:", error.message);
+  process.exit(1);
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -57,16 +65,33 @@ if (!fs.existsSync(certificatesDir)) {
 }
 console.log("JWT_SECRET:", process.env.JWT_SECRET); // Debugging log
 
-// ✅ Import Routes
-const authRoutes = require("./routes/authRoutes");
-const profileRoutes = require("./routes/profileRoutes");
-const studentRoutes = require("./routes/studentRoutes");
-const serviceRoutes = require("./routes/serviceRoutes");
-const certificationRoutes = require("./routes/certificationRoutes");
-const questionRoutes = require("./routes/questionRoutes"); // ✅ Question Routes
-const talentMarketplaceRoutes = require("./routes/talentMarketplace");
-const chatRoutes = require("./routes/chatRoutes");
-const adminRoutes = require("./routes/adminRoutes"); // ✅ Add admin routes
+// ✅ Import Routes with error handling
+let authRoutes,
+  profileRoutes,
+  studentRoutes,
+  serviceRoutes,
+  certificationRoutes,
+  questionRoutes,
+  talentMarketplaceRoutes,
+  chatRoutes,
+  adminRoutes;
+
+try {
+  authRoutes = require("./routes/authRoutes");
+  profileRoutes = require("./routes/profileRoutes");
+  studentRoutes = require("./routes/studentRoutes");
+  serviceRoutes = require("./routes/serviceRoutes");
+  certificationRoutes = require("./routes/certificationRoutes");
+  questionRoutes = require("./routes/questionRoutes");
+  talentMarketplaceRoutes = require("./routes/talentMarketplace");
+  chatRoutes = require("./routes/chatRoutes");
+  adminRoutes = require("./routes/adminRoutes");
+  console.log("✅ Routes loaded successfully");
+} catch (error) {
+  console.error("❌ Failed to load routes:", error.message);
+  console.error("Stack trace:", error.stack);
+  process.exit(1);
+}
 
 // ✅ Health check endpoint
 app.get("/", (req, res) => {
