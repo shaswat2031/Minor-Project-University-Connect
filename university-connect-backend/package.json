@@ -9,8 +9,11 @@
     "test": "node test.js",
     "test-auth": "node test-auth.js",
     "seed": "node addmcq.js",
-    "clean": "rm -rf node_modules package-lock.json && npm install",
-    "build": "bash build.sh",
+    "clean": "npm run build",
+    "build": "node -e \"console.log('🚀 Starting build...'); process.platform === 'win32' ? require('child_process').execSync('build.bat', {stdio: 'inherit'}) : require('child_process').execSync('bash build.sh', {stdio: 'inherit'})\"",
+    "build:windows": "build.bat",
+    "build:powershell": "powershell -ExecutionPolicy Bypass -File build.ps1",
+    "build:unix": "bash build.sh",
     "preflight": "node preflight.js",
     "postinstall": "echo 'Dependencies installed successfully'"
   },
