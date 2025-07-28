@@ -25,6 +25,7 @@ const io = socketIo(server, {
       "http://localhost:5173",
       "http://localhost:3000",
       "https://minor-project-university-connect-h83y.vercel.app",
+      "https://uniconnect.prasadshaswat.tech"
     ],
     credentials: true,
     methods: ["GET", "POST"],
@@ -38,6 +39,7 @@ app.use(
       "http://localhost:5173",
       "http://localhost:3000",
       "https://minor-project-university-connect-h83y.vercel.app",
+      "https://uniconnect.prasadshaswat.tech"
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -66,6 +68,26 @@ const talentMarketplaceRoutes = require("./routes/talentMarketplace");
 const chatRoutes = require("./routes/chatRoutes");
 const adminRoutes = require("./routes/adminRoutes"); // ✅ Add admin routes
 
+// ✅ Health check endpoint
+app.get("/", (req, res) => {
+  res.json({
+    message: "University Connect Backend API is running!",
+    version: "1.0.0",
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || "development",
+    database: mongoose.connection.readyState === 1 ? "connected" : "disconnected"
+  });
+});
+
+app.get("/health", (req, res) => {
+  res.json({
+    status: "ok",
+    database: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString()
+  });
+});
+
 // ✅ Use Routes with better error handling
 app.use("/api/auth", authRoutes);
 app.use("/api/users", profileRoutes);
@@ -93,24 +115,43 @@ app.use("/api/admin", adminRoutes); // ✅ Add admin routes
 app.use("/certificates", express.static(certificatesDir));
 
 // Update MongoDB Connection Handling
-const connectDB = async () => {
+const connectDB = async (retries = 5) => {
   try {
-    console.log("Attempting to connect to MongoDB...");
+    console.log(`Attempting to connect to MongoDB... (${6 - retries} attempt)`);
     console.log("MongoDB URI:", process.env.MONGODB_URI ? "Set" : "Not set");
 
     if (!process.env.MONGODB_URI) {
       throw new Error("MONGODB_URI environment variable is not set");
     }
 
-    await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    // Modern Mongoose connection (no deprecated options)
+    await mongoose.connect(process.env.MONGODB_URI);
     console.log("✅ MongoDB Connected successfully");
+    
+    // Handle connection events
+    mongoose.connection.on('error', (err) => {
+      console.error('❌ MongoDB connection error:', err);
+    });
+
+    mongoose.connection.on('disconnected', () => {
+      console.log('⚠️ MongoDB disconnected');
+    });
+
+    mongoose.connection.on('reconnected', () => {
+      console.log('✅ MongoDB reconnected');
+    });
+
   } catch (err) {
     console.error("❌ MongoDB Connection Error:", err.message);
     console.error("Full error:", err);
-    process.exit(1);
+    
+    if (retries > 0) {
+      console.log(`Retrying in 5 seconds... (${retries} retries left)`);
+      setTimeout(() => connectDB(retries - 1), 5000);
+    } else {
+      console.error("❌ Failed to connect to MongoDB after all retries");
+      process.exit(1);
+    }
   }
 };
 
