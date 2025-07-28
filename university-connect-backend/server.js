@@ -25,7 +25,7 @@ const io = socketIo(server, {
       "http://localhost:5173",
       "http://localhost:3000",
       "https://minor-project-university-connect-h83y.vercel.app",
-      "https://uniconnect.prasadshaswat.tech"
+      "https://uniconnect.prasadshaswat.tech",
     ],
     credentials: true,
     methods: ["GET", "POST"],
@@ -39,7 +39,7 @@ app.use(
       "http://localhost:5173",
       "http://localhost:3000",
       "https://minor-project-university-connect-h83y.vercel.app",
-      "https://uniconnect.prasadshaswat.tech"
+      "https://uniconnect.prasadshaswat.tech",
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -75,16 +75,18 @@ app.get("/", (req, res) => {
     version: "1.0.0",
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || "development",
-    database: mongoose.connection.readyState === 1 ? "connected" : "disconnected"
+    database:
+      mongoose.connection.readyState === 1 ? "connected" : "disconnected",
   });
 });
 
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",
-    database: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
+    database:
+      mongoose.connection.readyState === 1 ? "connected" : "disconnected",
     uptime: process.uptime(),
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
@@ -127,24 +129,23 @@ const connectDB = async (retries = 5) => {
     // Modern Mongoose connection (no deprecated options)
     await mongoose.connect(process.env.MONGODB_URI);
     console.log("✅ MongoDB Connected successfully");
-    
+
     // Handle connection events
-    mongoose.connection.on('error', (err) => {
-      console.error('❌ MongoDB connection error:', err);
+    mongoose.connection.on("error", (err) => {
+      console.error("❌ MongoDB connection error:", err);
     });
 
-    mongoose.connection.on('disconnected', () => {
-      console.log('⚠️ MongoDB disconnected');
+    mongoose.connection.on("disconnected", () => {
+      console.log("⚠️ MongoDB disconnected");
     });
 
-    mongoose.connection.on('reconnected', () => {
-      console.log('✅ MongoDB reconnected');
+    mongoose.connection.on("reconnected", () => {
+      console.log("✅ MongoDB reconnected");
     });
-
   } catch (err) {
     console.error("❌ MongoDB Connection Error:", err.message);
     console.error("Full error:", err);
-    
+
     if (retries > 0) {
       console.log(`Retrying in 5 seconds... (${retries} retries left)`);
       setTimeout(() => connectDB(retries - 1), 5000);
