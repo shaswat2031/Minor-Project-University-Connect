@@ -1,11 +1,11 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import React from "react";
-import { motion } from "framer-motion";
 import Particles from "react-tsparticles";
-import { loadSlim } from "tsparticles-slim"; // Use slim version
+import { loadSlim } from "tsparticles-slim";
 import PropTypes from "prop-types";
+import { gsap } from "gsap";
 
 const Login = ({ setIsAuthenticated }) => {
   const [email, setEmail] = useState("");
@@ -13,21 +13,181 @@ const Login = ({ setIsAuthenticated }) => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  // GSAP refs
+  const containerRef = useRef(null);
+  const formRef = useRef(null);
+  const titleRef = useRef(null);
+  const inputRefs = useRef([]);
+  const buttonRef = useRef(null);
+  const backgroundRef = useRef(null);
+  const glowRef1 = useRef(null);
+  const glowRef2 = useRef(null);
+
+  useEffect(() => {
+    // GSAP Timeline for entrance animations
+    const tl = gsap.timeline();
+
+    // Set initial states
+    gsap.set(
+      [
+        formRef.current,
+        titleRef.current,
+        ...inputRefs.current,
+        buttonRef.current,
+      ],
+      {
+        opacity: 0,
+        y: 50,
+      }
+    );
+
+    gsap.set([glowRef1.current, glowRef2.current], {
+      scale: 0,
+      opacity: 0,
+    });
+
+    // Background fade in
+    tl.from(backgroundRef.current, {
+      opacity: 0,
+      duration: 1,
+      ease: "power2.out",
+    })
+      // Glow elements
+      .to(
+        [glowRef1.current, glowRef2.current],
+        {
+          scale: 1,
+          opacity: 0.3,
+          duration: 1.5,
+          ease: "back.out(1.7)",
+          stagger: 0.2,
+        },
+        "-=0.5"
+      )
+      // Form container
+      .to(
+        formRef.current,
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.8,
+          ease: "back.out(1.7)",
+        },
+        "-=1"
+      )
+      // Title
+      .to(
+        titleRef.current,
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.6,
+          ease: "power2.out",
+        },
+        "-=0.4"
+      )
+      // Inputs
+      .to(
+        inputRefs.current,
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.5,
+          ease: "power2.out",
+          stagger: 0.1,
+        },
+        "-=0.3"
+      )
+      // Button
+      .to(
+        buttonRef.current,
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.5,
+          ease: "power2.out",
+        },
+        "-=0.2"
+      );
+
+    // Continuous animations
+    gsap.to(glowRef1.current, {
+      rotation: 360,
+      duration: 20,
+      ease: "none",
+      repeat: -1,
+    });
+
+    gsap.to(glowRef2.current, {
+      rotation: -360,
+      duration: 25,
+      ease: "none",
+      repeat: -1,
+    });
+
+    // Floating animation for form
+    gsap.to(formRef.current, {
+      y: -10,
+      duration: 3,
+      ease: "power1.inOut",
+      yoyo: true,
+      repeat: -1,
+    });
+  }, []);
+
+  const handleInputFocus = (index) => {
+    gsap.to(inputRefs.current[index], {
+      scale: 1.02,
+      duration: 0.3,
+      ease: "power2.out",
+    });
+  };
+
+  const handleInputBlur = (index) => {
+    gsap.to(inputRefs.current[index], {
+      scale: 1,
+      duration: 0.3,
+      ease: "power2.out",
+    });
+  };
+
+  const handleButtonHover = () => {
+    gsap.to(buttonRef.current, {
+      scale: 1.05,
+      boxShadow: "0 10px 25px rgba(0, 255, 252, 0.4)",
+      duration: 0.3,
+      ease: "power2.out",
+    });
+  };
+
+  const handleButtonLeave = () => {
+    gsap.to(buttonRef.current, {
+      scale: 1,
+      boxShadow: "0 4px 15px rgba(0, 255, 252, 0.2)",
+      duration: 0.3,
+      ease: "power2.out",
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
+
+    // Button loading animation
+    gsap.to(buttonRef.current, {
+      scale: 0.95,
+      duration: 0.1,
+      yoyo: true,
+      repeat: 1,
+    });
 
     try {
       console.log(
         "Attempting login to:",
         `${import.meta.env.VITE_API_URL}/api/auth/login`
       );
-      console.log("Environment variables:", {
-        VITE_API_URL: import.meta.env.VITE_API_URL,
-        MODE: import.meta.env.MODE,
-        DEV: import.meta.env.DEV,
-      });
 
       const res = await axios.post(
         `${import.meta.env.VITE_API_URL}/api/auth/login`,
@@ -36,14 +196,12 @@ const Login = ({ setIsAuthenticated }) => {
           password,
         },
         {
-          timeout: 10000, // 10 second timeout
+          timeout: 10000,
           headers: {
             "Content-Type": "application/json",
           },
         }
       );
-
-      console.log("Login Response:", res.data); // Debugging log
 
       const token = res.data.token;
       if (!token) {
@@ -62,10 +220,33 @@ const Login = ({ setIsAuthenticated }) => {
         })
       );
 
-      setIsAuthenticated(true);
-      navigate("/");
+      // Success animation
+      gsap.to(formRef.current, {
+        scale: 1.05,
+        duration: 0.3,
+        ease: "back.out(1.7)",
+        onComplete: () => {
+          gsap.to(formRef.current, {
+            opacity: 0,
+            y: -50,
+            duration: 0.5,
+            ease: "power2.in",
+            onComplete: () => {
+              setIsAuthenticated(true);
+              navigate("/");
+            },
+          });
+        },
+      });
     } catch (err) {
       console.error("Login Error:", err);
+
+      // Error animation
+      gsap.to(formRef.current, {
+        x: [-10, 10, -10, 10, 0],
+        duration: 0.4,
+        ease: "power2.out",
+      });
 
       let errorMessage = "Login failed. Please try again.";
 
@@ -88,17 +269,19 @@ const Login = ({ setIsAuthenticated }) => {
       setLoading(false);
     }
   };
+
   // Particle Background Settings
   const particlesInit = useCallback(async (engine) => {
     try {
-      console.log("Initializing tsparticles engine..."); // Corrected syntax
+      console.log("Initializing tsparticles engine...");
       if (engine && typeof engine.addShape === "function") {
-        await loadSlim(engine); // Use loadSlim instead of loadFull
+        await loadSlim(engine);
       }
     } catch (error) {
       console.error("Error initializing tsparticles engine:", error);
     }
   }, []);
+
   const particlesLoaded = useCallback((container) => {
     console.log("Particles loaded:", container);
   }, []);
@@ -141,9 +324,15 @@ const Login = ({ setIsAuthenticated }) => {
   };
 
   return (
-    <div className="relative w-full h-screen flex justify-center items-center overflow-hidden">
+    <div
+      ref={containerRef}
+      className="relative w-full h-screen flex justify-center items-center overflow-hidden"
+    >
       {/* Animated Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#0a0f1d] via-[#141e30] to-[#0a0f1d] animate-gradient"></div>
+      <div
+        ref={backgroundRef}
+        className="absolute inset-0 bg-gradient-to-br from-[#0a0f1d] via-[#141e30] to-[#0a0f1d]"
+      ></div>
 
       {/* Fullscreen Particles */}
       <Particles
@@ -155,49 +344,61 @@ const Login = ({ setIsAuthenticated }) => {
       />
 
       {/* Glowing Animated Rings */}
-      <div className="absolute w-[500px] h-[500px] bg-[#00fffc]/20 blur-3xl rounded-full top-1/4 left-1/3 animate-pulse"></div>
-      <div className="absolute w-[400px] h-[400px] bg-[#ff00ff]/20 blur-3xl rounded-full bottom-1/4 right-1/3 animate-pulse"></div>
+      <div
+        ref={glowRef1}
+        className="absolute w-[500px] h-[500px] bg-[#00fffc]/20 blur-3xl rounded-full top-1/4 left-1/3"
+      ></div>
+      <div
+        ref={glowRef2}
+        className="absolute w-[400px] h-[400px] bg-[#ff00ff]/20 blur-3xl rounded-full bottom-1/4 right-1/3"
+      ></div>
 
       {/* Login Form Container */}
-      <motion.div
-        initial={{ opacity: 0, y: -50 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
+      <div
+        ref={formRef}
         className="relative bg-[#131a2b]/80 p-8 rounded-xl shadow-2xl w-96 border border-[#00fffc] backdrop-blur-xl"
       >
-        <h2 className="text-3xl font-bold mb-4 text-center text-[#00fffc]">
+        <h2
+          ref={titleRef}
+          className="text-3xl font-bold mb-4 text-center text-[#00fffc]"
+        >
           Login
         </h2>
         {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <motion.input
+          <input
+            ref={(el) => (inputRefs.current[0] = el)}
             type="email"
             placeholder="Email"
-            className="w-full p-3 border border-[#00fffc] bg-transparent text-white rounded-md focus:outline-none focus:ring-2 focus:ring-[#00fffc]"
+            className="w-full p-3 border border-[#00fffc] bg-transparent text-white rounded-md focus:outline-none focus:ring-2 focus:ring-[#00fffc] transition-all duration-300"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            onFocus={() => handleInputFocus(0)}
+            onBlur={() => handleInputBlur(0)}
             required
-            whileFocus={{ scale: 1.05 }}
           />
-          <motion.input
+          <input
+            ref={(el) => (inputRefs.current[1] = el)}
             type="password"
             placeholder="Password"
-            className="w-full p-3 border border-[#00fffc] bg-transparent text-white rounded-md focus:outline-none focus:ring-2 focus:ring-[#00fffc]"
+            className="w-full p-3 border border-[#00fffc] bg-transparent text-white rounded-md focus:outline-none focus:ring-2 focus:ring-[#00fffc] transition-all duration-300"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            onFocus={() => handleInputFocus(1)}
+            onBlur={() => handleInputBlur(1)}
             required
-            whileFocus={{ scale: 1.05 }}
           />
-          <motion.button
+          <button
+            ref={buttonRef}
             type="submit"
-            className="w-full bg-[#00fffc] text-[#0a0f1d] font-semibold p-3 rounded-md hover:bg-[#00e6e6] transition shadow-lg"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            className="w-full bg-[#00fffc] text-[#0a0f1d] font-semibold p-3 rounded-md transition shadow-lg"
+            onMouseEnter={handleButtonHover}
+            onMouseLeave={handleButtonLeave}
             disabled={loading}
           >
             {loading ? "Logging in..." : "Login"}
-          </motion.button>
+          </button>
         </form>
         <p className="text-gray-400 text-sm text-center mt-4">
           Don&apos;t have an account?{" "}
@@ -205,7 +406,7 @@ const Login = ({ setIsAuthenticated }) => {
             Register
           </a>
         </p>
-      </motion.div>
+      </div>
     </div>
   );
 };

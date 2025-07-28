@@ -9,6 +9,7 @@ import {
   FaClock,
   FaCode,
   FaLightbulb,
+  FaExclamationTriangle,
 } from "react-icons/fa";
 
 const CodingTest = () => {
@@ -21,6 +22,10 @@ const CodingTest = () => {
   const [submissionResults, setSubmissionResults] = useState(null);
   const [timeLeft, setTimeLeft] = useState(null);
   const [activeTab, setActiveTab] = useState("description");
+  const [allTestsPassed, setAllTestsPassed] = useState(false);
+  const [showTestWarning, setShowTestWarning] = useState(false);
+  const [codeOutput, setCodeOutput] = useState(null);
+  const [codeLoading, setCodeLoading] = useState(false);
 
   const languages = [
     { value: "javascript", label: "JavaScript", monacoLang: "javascript" },
@@ -41,6 +46,17 @@ const CodingTest = () => {
       return () => clearInterval(timer);
     }
   }, [selectedQuestion, timeLeft]);
+
+  // Check if all test cases have been run and passed
+  useEffect(() => {
+    if (selectedQuestion && selectedQuestion.testCases) {
+      const totalTestCases = selectedQuestion.testCases.length;
+      const passedTestCases = testResults.filter(result => result && result.passed).length;
+      const allTestsRun = testResults.length === totalTestCases;
+      
+      setAllTestsPassed(allTestsRun && passedTestCases === totalTestCases);
+    }
+  }, [testResults, selectedQuestion]);
 
   const fetchQuestions = async () => {
     try {
@@ -69,6 +85,8 @@ const CodingTest = () => {
       setTimeLeft(question.timeLimit * 60); // Convert minutes to seconds
       setTestResults([]);
       setSubmissionResults(null);
+      setAllTestsPassed(false);
+      setShowTestWarning(false);
     } catch (error) {
       console.error("Error fetching question details:", error);
     } finally {
@@ -130,8 +148,41 @@ string solution(string input) {
     }
   };
 
+  const runAllTests = async () => {
+    if (!selectedQuestion || !selectedQuestion.testCases) return;
+
+    try {
+      setLoading(true);
+      const promises = selectedQuestion.testCases.map((_, index) => 
+        axios.post(
+          `${import.meta.env.VITE_API_URL}/api/admin/coding/execute`,
+          {
+            code,
+            language: language,
+            questionId: selectedQuestion._id,
+            testCaseIndex: index,
+          }
+        )
+      );
+
+      const responses = await Promise.all(promises);
+      const newResults = responses.map(response => response.data);
+      setTestResults(newResults);
+    } catch (error) {
+      console.error("Error running all tests:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const submitCode = async () => {
     if (!selectedQuestion) return;
+
+    // Check if all test cases have been run and passed
+    if (!allTestsPassed) {
+      setShowTestWarning(true);
+      return;
+    }
 
     try {
       setLoading(true);
@@ -168,6 +219,36 @@ string solution(string input) {
         return "text-red-400";
       default:
         return "text-gray-400";
+    }
+  };
+
+  useEffect(() => {
+    console.log("Selected Question:", selectedQuestion);
+    console.log("Test Cases:", selectedQuestion?.testCases);
+    console.log("Loading:", loading);
+  }, [selectedQuestion, loading]);
+
+  const runCertificationCode = async () => {
+    setCodeLoading(true);
+    setCodeOutput(null);
+    try {
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/certification/coding/execute`,
+        {
+          code: code || selectedQuestion?.starterCode || "",
+          language: "JavaScript", // or use selectedQuestion.language if available
+          questionId: selectedQuestion._id,
+          testCaseIndex: 0, // or allow user to pick which test case
+        },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+      setCodeOutput(response.data);
+    } catch (error) {
+      setCodeOutput({ error: true, output: "Error running code" });
+    } finally {
+      setCodeLoading(false);
     }
   };
 
@@ -340,36 +421,25 @@ string solution(string input) {
           </div>
 
           {/* Tab Content */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-4">
             {activeTab === "description" && (
-              <div className="space-y-6">
-                <div>
-                  <h2 className="text-2xl font-bold mb-4">
-                    {selectedQuestion.title}
-                  </h2>
-                  <div className="prose prose-invert max-w-none">
-                    <div
-                      dangerouslySetInnerHTML={{
-                        __html: selectedQuestion.description.replace(
-                          /\n/g,
-                          "<br>"
-                        ),
-                      }}
-                    />
-                  </div>
+              <div className="space-y-4">
+                <div className="prose prose-invert max-w-none">
+                  <h3 className="text-xl font-bold mb-4">Problem Description</h3>
+                  <p className="text-gray-300 whitespace-pre-wrap">
+                    {selectedQuestion.description}
+                  </p>
                 </div>
 
                 {selectedQuestion.constraints && (
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2 flex items-center">
+                  <div className="bg-gray-800 p-4 rounded">
+                    <h4 className="font-semibold mb-2 flex items-center">
                       <FaLightbulb className="mr-2 text-yellow-400" />
                       Constraints
-                    </h3>
-                    <div className="bg-gray-800 p-4 rounded">
-                      <pre className="text-sm text-gray-300">
-                        {selectedQuestion.constraints}
-                      </pre>
-                    </div>
+                    </h4>
+                    <p className="text-gray-300 whitespace-pre-wrap">
+                      {selectedQuestion.constraints}
+                    </p>
                   </div>
                 )}
               </div>
@@ -377,18 +447,58 @@ string solution(string input) {
 
             {activeTab === "testcases" && (
               <div className="space-y-4">
+                {/* Test Status Summary */}
+                <div className="bg-gray-800 p-4 rounded">
+                  <div className="flex justify-between items-center mb-3">
+                    <h4 className="font-semibold">Test Cases Status</h4>
+                    <button
+                      onClick={runAllTests}
+                      disabled={loading}
+                      className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded text-sm flex items-center space-x-1"
+                    >
+                      <FaPlay className="text-xs" />
+                      <span>Run All Tests</span>
+                    </button>
+                  </div>
+                  <div className="flex space-x-4 text-sm">
+                    <span className="text-gray-400">
+                      Total: {selectedQuestion.testCases?.length || 0}
+                    </span>
+                    <span className="text-green-400">
+                      Passed: {testResults.filter(r => r && r.passed).length}
+                    </span>
+                    <span className="text-red-400">
+                      Failed: {testResults.filter(r => r && !r.passed).length}
+                    </span>
+                    <span className="text-yellow-400">
+                      Not Run: {(selectedQuestion.testCases?.length || 0) - testResults.length}
+                    </span>
+                  </div>
+                </div>
+
                 {selectedQuestion.testCases?.map((testCase, index) => (
                   <div key={index} className="bg-gray-800 p-4 rounded">
                     <div className="flex justify-between items-center mb-2">
                       <h4 className="font-semibold">Test Case {index + 1}</h4>
-                      <button
-                        onClick={() => runCode(index)}
-                        disabled={loading}
-                        className="px-3 py-1 bg-purple-600 hover:bg-purple-700 rounded text-sm flex items-center space-x-1"
-                      >
-                        <FaPlay className="text-xs" />
-                        <span>Run</span>
-                      </button>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => runCode(index)}
+                          disabled={loading}
+                          className="px-3 py-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 rounded text-sm flex items-center space-x-1"
+                        >
+                          <FaPlay className="text-xs" />
+                          <span>Run</span>
+                        </button>
+                        {testResults[index] && (
+                          <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                            testResults[index].passed 
+                              ? "bg-green-600 text-white" 
+                              : "bg-red-600 text-white"
+                          }`}>
+                            {testResults[index].passed ? "PASS" : "FAIL"}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <div>
@@ -519,26 +629,85 @@ string solution(string input) {
           {/* Action Buttons */}
           <div className="border-t border-gray-700 p-4 flex justify-between">
             <div className="flex space-x-2">
+              <div className="text-white text-sm">
+                Debug: {selectedQuestion ? 'Question selected' : 'No question'} | 
+                Test Cases: {selectedQuestion?.testCases?.length || 0} | 
+                Loading: {loading ? 'Yes' : 'No'}
+              </div>
+              
               <button
                 onClick={() => runCode(0)}
-                disabled={loading || !selectedQuestion.testCases?.length}
+                disabled={loading} // Remove the test cases check temporarily
                 className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 rounded flex items-center space-x-2"
               >
                 <FaPlay />
                 <span>Run Code</span>
               </button>
+              <button
+                onClick={runAllTests}
+                disabled={loading || !selectedQuestion.testCases?.length}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded flex items-center space-x-2"
+              >
+                <FaPlay />
+                <span>Run All Tests</span>
+              </button>
             </div>
 
-            <button
-              onClick={submitCode}
-              disabled={loading}
-              className="px-6 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 rounded font-semibold"
-            >
-              {loading ? "Submitting..." : "Submit Solution"}
-            </button>
+            <div className="flex items-center space-x-2">
+              {!allTestsPassed && (
+                <div className="flex items-center space-x-1 text-yellow-400 text-sm">
+                  <FaExclamationTriangle />
+                  <span>All tests must pass</span>
+                </div>
+              )}
+              <button
+                onClick={submitCode}
+                disabled={loading || !allTestsPassed}
+                className={`px-6 py-2 rounded font-semibold ${
+                  allTestsPassed
+                    ? "bg-purple-600 hover:bg-purple-700"
+                    : "bg-gray-600 cursor-not-allowed"
+                }`}
+              >
+                {loading ? "Submitting..." : "Submit Solution"}
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Test Warning Modal */}
+      {showTestWarning && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-md mx-4">
+            <div className="flex items-center space-x-3 mb-4">
+              <FaExclamationTriangle className="text-yellow-400 text-2xl" />
+              <h3 className="text-xl font-bold text-white">Test Cases Required</h3>
+            </div>
+            <p className="text-gray-300 mb-6">
+              You must run and pass all test cases before submitting your solution. 
+              Please run all tests first to ensure your code works correctly.
+            </p>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowTestWarning(false)}
+                className="flex-1 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowTestWarning(false);
+                  runAllTests();
+                }}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+              >
+                Run All Tests
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

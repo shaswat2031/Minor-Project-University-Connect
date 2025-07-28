@@ -61,6 +61,17 @@ class ChatService {
     this.socket.on("disconnect", (reason) => {
       console.log("Disconnected from chat server:", reason);
       this.isConnected = false;
+
+      // Auto-reconnect for certain reasons
+      if (reason === "io server disconnect") {
+        // Server disconnected the client, try to reconnect
+        console.log("Server disconnected, attempting reconnection...");
+        setTimeout(() => {
+          if (this.socket && !this.isConnected) {
+            this.socket.connect();
+          }
+        }, 1000);
+      }
     });
 
     this.socket.on("connect_error", (error) => {
@@ -78,6 +89,21 @@ class ChatService {
       console.log(`Reconnected after ${attemptNumber} attempts`);
       this.isConnected = true;
       this.reconnectAttempts = 0;
+
+      // Re-emit user online status after reconnection
+      const userInfo = {
+        name: localStorage.getItem("userName") || "User",
+      };
+      this.emitUserOnline(userInfo);
+    });
+
+    this.socket.on("reconnect_error", (error) => {
+      console.error("Reconnection error:", error.message);
+    });
+
+    this.socket.on("reconnect_failed", () => {
+      console.error("Failed to reconnect after maximum attempts");
+      this.isConnected = false;
     });
   }
 
@@ -107,12 +133,45 @@ class ChatService {
     }
 
     if (this.isSocketConnected()) {
-      this.socket.emit("send-message", {
-        receiverId,
-        content,
-        messageType,
+      return new Promise((resolve, reject) => {
+        // Set up a timeout for socket response
+        const timeout = setTimeout(() => {
+          console.warn("Socket message timeout, falling back to HTTP");
+          this.sendMessageHTTP(receiverId, content, messageType)
+            .then(resolve)
+            .catch(reject);
+        }, 5000);
+
+        // Set up success handler
+        const onSuccess = (message) => {
+          clearTimeout(timeout);
+          this.socket.off("message-sent", onSuccess);
+          this.socket.off("message-error", onError);
+          resolve(message);
+        };
+
+        // Set up error handler
+        const onError = (error) => {
+          clearTimeout(timeout);
+          this.socket.off("message-sent", onSuccess);
+          this.socket.off("message-error", onError);
+          console.warn("Socket message failed, falling back to HTTP:", error);
+          this.sendMessageHTTP(receiverId, content, messageType)
+            .then(resolve)
+            .catch(reject);
+        };
+
+        // Listen for response
+        this.socket.once("message-sent", onSuccess);
+        this.socket.once("message-error", onError);
+
+        // Send the message
+        this.socket.emit("send-message", {
+          receiverId,
+          content,
+          messageType,
+        });
       });
-      return Promise.resolve();
     } else {
       console.warn("Socket not connected, using HTTP fallback");
       return this.sendMessageHTTP(receiverId, content, messageType);

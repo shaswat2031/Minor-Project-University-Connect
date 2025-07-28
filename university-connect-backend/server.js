@@ -8,6 +8,11 @@ const http = require("http");
 const socketIo = require("socket.io");
 const jwt = require("jsonwebtoken");
 
+// Import models at the top
+const Message = require("./models/Message");
+const Conversation = require("./models/Conversation");
+const User = require("./models/User");
+
 dotenv.config();
 
 const app = express();
@@ -153,7 +158,6 @@ io.on("connection", (socket) => {
   // Get user info and mark as online
   socket.on("user-online", async (userInfo) => {
     try {
-      const User = require("./models/User");
       const user = await User.findById(socket.userId);
 
       if (!user) {
@@ -204,12 +208,13 @@ io.on("connection", (socket) => {
   socket.on("send-message", async (data) => {
     try {
       const { receiverId, content, messageType = "text" } = data;
-      const Message = require("./models/Message");
-      const Conversation = require("./models/Conversation");
-      const User = require("./models/User");
+
+      console.log(`Message send attempt: ${socket.userId} -> ${receiverId}`);
+      console.log("Message content:", content);
 
       // Validate input
       if (!receiverId || !content || !content.trim()) {
+        console.log("Missing required fields");
         socket.emit("message-error", { error: "Missing required fields" });
         return;
       }
@@ -221,11 +226,13 @@ io.on("connection", (socket) => {
       ]);
 
       if (!sender) {
+        console.log("Sender not found:", socket.userId);
         socket.emit("message-error", { error: "Sender not found" });
         return;
       }
 
       if (!receiver) {
+        console.log("Receiver not found:", receiverId);
         socket.emit("message-error", { error: "Receiver not found" });
         return;
       }
@@ -239,8 +246,12 @@ io.on("connection", (socket) => {
       });
 
       await message.save();
+
+      // Populate the message with sender and receiver info
       await message.populate("sender", "name");
       await message.populate("receiver", "name");
+
+      console.log("Message saved successfully:", message._id);
 
       // Update or create conversation
       let conversation = await Conversation.findOne({
@@ -259,36 +270,47 @@ io.on("connection", (socket) => {
       }
 
       await conversation.save();
+      console.log("Conversation updated successfully");
 
       // Send message to receiver if online
       const receiverSocketId = connectedUsers.get(receiverId);
       if (receiverSocketId) {
-        socket.to(receiverId).emit("receive-message", message);
+        // Emit to the specific socket ID of the receiver
+        io.to(receiverSocketId).emit("receive-message", message);
+        console.log(`Message sent to receiver socket: ${receiverSocketId}`);
+      } else {
+        console.log(`Receiver ${receiverId} is not online`);
       }
 
       // Send confirmation to sender
       socket.emit("message-sent", message);
-
-      console.log(`Message sent from ${socket.userId} to ${receiverId}`);
+      console.log(`Message confirmation sent to sender: ${socket.userId}`);
     } catch (error) {
       console.error("Error sending message:", error);
+      console.error("Stack trace:", error.stack);
       socket.emit("message-error", { error: "Failed to send message" });
     }
   });
 
   // Handle typing indicators
   socket.on("typing", (data) => {
-    socket.to(data.receiverId).emit("user-typing", {
-      senderId: socket.userId,
-      isTyping: true,
-    });
+    const receiverSocketId = connectedUsers.get(data.receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("user-typing", {
+        senderId: socket.userId,
+        isTyping: true,
+      });
+    }
   });
 
   socket.on("stop-typing", (data) => {
-    socket.to(data.receiverId).emit("user-typing", {
-      senderId: socket.userId,
-      isTyping: false,
-    });
+    const receiverSocketId = connectedUsers.get(data.receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("user-typing", {
+        senderId: socket.userId,
+        isTyping: false,
+      });
+    }
   });
 
   // Handle disconnect with better cleanup

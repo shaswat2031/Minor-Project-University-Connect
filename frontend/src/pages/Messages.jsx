@@ -134,7 +134,16 @@ const Messages = () => {
 
     chatService.onMessageError((error) => {
       console.error("Message error:", error);
-      alert(error.error || "Failed to send message. Please try again.");
+      const errorMessage =
+        error?.error ||
+        error?.message ||
+        "Failed to send message. Please try again.";
+      alert(errorMessage);
+
+      // Show additional debugging info in console
+      console.error("Full error object:", error);
+      console.error("Socket connected:", chatService.isSocketConnected());
+      console.error("Selected user:", selectedUser);
     });
 
     chatService.onTyping((data) => {
@@ -204,11 +213,35 @@ const Messages = () => {
     }
 
     try {
-      await chatService.sendMessage(selectedUser.id, messageContent);
+      // Try socket first, with HTTP fallback
+      if (chatService.isSocketConnected()) {
+        console.log("Sending message via socket...");
+        await chatService.sendMessage(selectedUser.id, messageContent);
+      } else {
+        console.log("Socket not connected, using HTTP fallback...");
+        await chatService.sendMessageHTTP(selectedUser.id, messageContent);
+      }
     } catch (error) {
       console.error("Error sending message:", error);
       setNewMessage(messageContent); // Restore message on error
-      alert("Failed to send message. Please try again.");
+
+      // Provide more specific error messages
+      let errorMessage = "Failed to send message. Please try again.";
+      if (error.response?.status === 401) {
+        errorMessage = "Authentication failed. Please log in again.";
+        localStorage.removeItem("token");
+        navigate("/login");
+        return;
+      } else if (error.response?.status === 404) {
+        errorMessage =
+          "User not found. They may have deactivated their account.";
+      } else if (error.code === "ECONNABORTED") {
+        errorMessage = "Request timeout. Please check your connection.";
+      } else if (!navigator.onLine) {
+        errorMessage = "No internet connection. Please check your network.";
+      }
+
+      alert(errorMessage);
     }
   };
 
@@ -261,7 +294,11 @@ const Messages = () => {
           <div className="p-4 border-b border-gray-700">
             <h2 className="text-xl font-bold text-blue-400">Messages</h2>
             <p className="text-sm text-gray-400">
-              {socketConnected ? "Connected" : "Connecting..."}
+              {socketConnected ? (
+                <span className="text-green-400">✓ Connected</span>
+              ) : (
+                <span className="text-yellow-400">⚠ Connecting...</span>
+              )}
             </p>
           </div>
           <div className="overflow-y-auto h-full">

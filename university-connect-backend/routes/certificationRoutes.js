@@ -9,6 +9,7 @@ const fs = require("fs");
 const path = require("path");
 const jwt = require("jsonwebtoken");
 const authMiddleware = require("../middleware/authMiddleware");
+const VM = require("vm");
 
 // Custom auth middleware that allows test tokens
 const authOrTest = (req, res, next) => {
@@ -360,6 +361,160 @@ router.post("/submit", authOrTest, async (req, res) => {
       error: error.message,
       details: process.env.NODE_ENV === "development" ? error.stack : undefined,
     });
+  }
+});
+
+/**
+ * Execute coding test case for certification
+ */
+router.post("/coding/execute", authOrTest, async (req, res) => {
+  try {
+    const { code, language, questionId, testCaseIndex } = req.body;
+
+    const question = await CodingQuestion.findById(questionId);
+    if (!question) {
+      return res.status(404).json({ message: "Question not found" });
+    }
+
+    const testCase = question.testCases[testCaseIndex];
+    if (!testCase) {
+      return res.status(404).json({ message: "Test case not found" });
+    }
+
+    let result;
+    try {
+      if (language === "JavaScript") {
+        const vm = new VM({
+          timeout: 5000,
+          sandbox: {
+            console: {
+              log: () => {}, // Disable console.log for security
+            },
+          },
+        });
+
+        // Execute the code with the test input
+        const executeCode = `
+          ${code}
+          
+          // Parse input if needed
+          const input = ${JSON.stringify(testCase.input)};
+          
+          // Execute the solution (assuming main function exists)
+          if (typeof solution === 'function') {
+            JSON.stringify(solution(input));
+          } else if (typeof main === 'function') {
+            JSON.stringify(main(input));
+          } else {
+            'No main function found';
+          }
+        `;
+
+        result = vm.run(executeCode);
+      } else {
+        // For other languages, you'd need to implement language-specific execution
+        return res.status(400).json({ message: "Language not supported yet" });
+      }
+
+      const passed = result.trim() === testCase.expectedOutput.trim();
+
+      res.json({
+        passed,
+        output: result,
+        expected: testCase.expectedOutput,
+        input: testCase.input,
+      });
+    } catch (execError) {
+      res.json({
+        passed: false,
+        output: execError.message,
+        expected: testCase.expectedOutput,
+        input: testCase.input,
+        error: true,
+      });
+    }
+  } catch (error) {
+    console.error("Error executing code:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+/**
+ * Submit coding solution for certification
+ */
+router.post("/coding/submit", authOrTest, async (req, res) => {
+  try {
+    const { code, language, questionId } = req.body;
+
+    const question = await CodingQuestion.findById(questionId);
+    if (!question) {
+      return res.status(404).json({ message: "Question not found" });
+    }
+
+    const results = [];
+    let passedCount = 0;
+
+    for (let i = 0; i < question.testCases.length; i++) {
+      const testCase = question.testCases[i];
+
+      try {
+        let result;
+        if (language === "JavaScript") {
+          const vm = new VM({
+            timeout: 5000,
+            sandbox: {},
+          });
+
+          const executeCode = `
+            ${code}
+            
+            const input = ${JSON.stringify(testCase.input)};
+            
+            if (typeof solution === 'function') {
+              JSON.stringify(solution(input));
+            } else if (typeof main === 'function') {
+              JSON.stringify(main(input));
+            } else {
+              'No main function found';
+            }
+          `;
+
+          result = vm.run(executeCode);
+        }
+
+        const passed = result.trim() === testCase.expectedOutput.trim();
+        if (passed) passedCount++;
+
+        results.push({
+          testCase: i + 1,
+          passed,
+          input: testCase.isHidden ? "Hidden" : testCase.input,
+          output: result,
+          expected: testCase.isHidden ? "Hidden" : testCase.expectedOutput,
+        });
+      } catch (execError) {
+        results.push({
+          testCase: i + 1,
+          passed: false,
+          input: testCase.isHidden ? "Hidden" : testCase.input,
+          output: execError.message,
+          expected: testCase.isHidden ? "Hidden" : testCase.expectedOutput,
+          error: true,
+        });
+      }
+    }
+
+    const score = (passedCount / question.testCases.length) * 100;
+
+    res.json({
+      score,
+      passedTests: passedCount,
+      totalTests: question.testCases.length,
+      results,
+    });
+  } catch (error) {
+    console.error("Error submitting code:", error);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
