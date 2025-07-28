@@ -9,11 +9,10 @@ import {
   FaLock,
 } from "react-icons/fa";
 
-const Navbar = () => {
+const Navbar = ({ isAuthenticated, setIsAuthenticated }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [adminCredentials, setAdminCredentials] = useState({
     username: "",
@@ -27,15 +26,15 @@ const Navbar = () => {
   useEffect(() => {
     const adminStatus = localStorage.getItem("adminLoggedIn");
     const token = localStorage.getItem("token");
-    
+
     if (adminStatus === "true") {
       setIsAdminLoggedIn(true);
     }
-    
-    if (token) {
+
+    if (token && !isAuthenticated) {
       setIsAuthenticated(true);
     }
-  }, []);
+  }, [isAuthenticated, setIsAuthenticated]);
 
   // Handle admin login
   const handleAdminLogin = (e) => {
