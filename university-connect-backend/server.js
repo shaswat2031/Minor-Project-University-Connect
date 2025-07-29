@@ -1,15 +1,56 @@
+require("dotenv").config();
+
+// Add debug logging at the top
+console.log("🔍 Environment Variables Check:");
+console.log("MONGODB_URI:", process.env.MONGODB_URI ? "Set ✅" : "Not set ❌");
+console.log(
+  "MongoDB URI starts with:",
+  process.env.MONGODB_URI
+    ? process.env.MONGODB_URI.substring(0, 20) + "..."
+    : "N/A"
+);
+
 const express = require("express");
-const cors = require("cors");
-const dotenv = require("dotenv");
 const mongoose = require("mongoose");
+const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
 const http = require("http");
 const socketIo = require("socket.io");
 const jwt = require("jsonwebtoken");
 
-// Load environment variables first
-dotenv.config();
+// Enhanced MongoDB connection function
+const connectDB = async () => {
+  try {
+    if (!process.env.MONGODB_URI) {
+      throw new Error("MONGODB_URI environment variable is not set");
+    }
+
+    console.log("🔌 Attempting to connect to MongoDB...");
+    console.log(
+      "🌐 MongoDB URI (first 30 chars):",
+      process.env.MONGODB_URI.substring(0, 30) + "..."
+    );
+
+    const conn = await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 10000, // 10 second timeout
+      socketTimeoutMS: 45000, // 45 second socket timeout
+      maxPoolSize: 10,
+      minPoolSize: 5,
+    });
+
+    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+    console.log(`📊 Database Name: ${conn.connection.name}`);
+
+    return conn;
+  } catch (error) {
+    console.error("❌ MongoDB Connection Error:", error.message);
+    console.error("Full error:", error);
+    throw error;
+  }
+};
 
 // Import models at the top with error handling
 let Message, Conversation, User;
@@ -140,46 +181,6 @@ app.use("/api/admin", adminRoutes); // ✅ Add admin routes
 
 // ✅ Serve Certificates Publicly
 app.use("/certificates", express.static(certificatesDir));
-
-// Update MongoDB Connection Handling
-const connectDB = async (retries = 5) => {
-  try {
-    console.log(`Attempting to connect to MongoDB... (${6 - retries} attempt)`);
-    console.log("MongoDB URI:", process.env.MONGODB_URI ? "Set" : "Not set");
-
-    if (!process.env.MONGODB_URI) {
-      throw new Error("MONGODB_URI environment variable is not set");
-    }
-
-    // Modern Mongoose connection (no deprecated options)
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log("✅ MongoDB Connected successfully");
-
-    // Handle connection events
-    mongoose.connection.on("error", (err) => {
-      console.error("❌ MongoDB connection error:", err);
-    });
-
-    mongoose.connection.on("disconnected", () => {
-      console.log("⚠️ MongoDB disconnected");
-    });
-
-    mongoose.connection.on("reconnected", () => {
-      console.log("✅ MongoDB reconnected");
-    });
-  } catch (err) {
-    console.error("❌ MongoDB Connection Error:", err.message);
-    console.error("Full error:", err);
-
-    if (retries > 0) {
-      console.log(`Retrying in 5 seconds... (${retries} retries left)`);
-      setTimeout(() => connectDB(retries - 1), 5000);
-    } else {
-      console.error("❌ Failed to connect to MongoDB after all retries");
-      process.exit(1);
-    }
-  }
-};
 
 // Socket.IO authentication middleware
 const authenticateSocket = (socket, next) => {
@@ -457,12 +458,44 @@ app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });
 });
 
-connectDB(); // 🔥 Connect to MongoDB
+const startServer = async () => {
+  let retries = 5;
 
-// ✅ Start Server
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📡 API Base URL: http://localhost:${PORT}`);
-  console.log(`🔑 JWT Secret: ${process.env.JWT_SECRET ? "Set" : "Not set"}`);
-});
+  while (retries > 0) {
+    try {
+      // Connect to MongoDB
+      await connectDB();
+
+      // Start server only after successful DB connection
+      const PORT = process.env.PORT || 5000;
+      app.listen(PORT, () => {
+        console.log(`🚀 Server running on port ${PORT}`);
+        console.log(
+          `🌐 Frontend URL: ${
+            process.env.FRONTEND_URL || "http://localhost:3000"
+          }`
+        );
+        console.log(
+          `📡 API URL: ${process.env.API_URL || `http://localhost:${PORT}`}`
+        );
+        console.log(`🔧 Environment: ${process.env.NODE_ENV || "development"}`);
+      });
+
+      break; // Exit retry loop on success
+    } catch (error) {
+      retries--;
+      console.error(`💥 Failed to start server. ${retries} retries left.`);
+
+      if (retries === 0) {
+        console.error("🚫 Max retries reached. Exiting...");
+        process.exit(1);
+      }
+
+      console.log("⏳ Retrying in 5 seconds...");
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
+  }
+};
+
+// Start the server
+startServer();

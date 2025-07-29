@@ -11,7 +11,7 @@
     "seed": "node seedDatabase.js",
     "clean": "npm install",
     "build": "npm install",
-    "postinstall": "npm rebuild"
+    "postinstall": "echo 'Dependencies installed successfully'"
   },
   "dependencies": {
     "axios": "^1.6.0",
