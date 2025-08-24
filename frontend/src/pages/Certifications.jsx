@@ -167,7 +167,7 @@ const Certifications = () => {
       console.log("Fetching questions for category:", category);
 
       const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/certification/questions`, // Fixed: removed 's' from certifications
+        `${import.meta.env.VITE_API_URL}/api/certifications/questions`, // Use plural 'certifications' to match backend routes
         {
           params: { category },
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -283,7 +283,7 @@ const Certifications = () => {
 
       // Submit to backend
       const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/certification/submit`,
+        `${import.meta.env.VITE_API_URL}/api/certifications/submit`,
         {
           userId,
           userName,
@@ -527,7 +527,7 @@ const Certifications = () => {
     try {
       setLoading(true);
       const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/certification/coding/execute`,
+        `${import.meta.env.VITE_API_URL}/api/certifications/coding/execute`,
         {
           code: answers[questionIndex] || question.starterCode || "",
           language: "JavaScript", // Default to JavaScript for now

@@ -85,6 +85,12 @@ router.post("/register", async (req, res) => {
 
 // Updated Login route with JWT
 router.post("/login", async (req, res) => {
+  console.log('Login route hit:', {
+    method: req.method,
+    path: req.path,
+    body: req.body,
+    headers: req.headers
+  });
   try {
     const { email, password } = req.body;
 

@@ -19,6 +19,20 @@ const http = require("http");
 const socketIo = require("socket.io");
 const jwt = require("jsonwebtoken");
 
+// Import all routes
+const authRoutes = require('./routes/authRoutes');
+const profileRoutes = require("./routes/profileRoutes");
+const studentRoutes = require("./routes/studentRoutes");
+const serviceRoutes = require("./routes/serviceRoutes");
+const certificationRoutes = require("./routes/certificationRoutes");
+const questionRoutes = require("./routes/questionRoutes");
+const talentMarketplaceRoutes = require("./routes/talentMarketplace");
+const chatRoutes = require("./routes/chatRoutes");
+const adminRoutes = require("./routes/adminRoutes");
+const aiRoadmapRoutes = require('./routes/aiRoadmapRoutes');
+const checkAuthRoutes = require('./routes/check-auth');
+const testRoutes = require('./routes/test-routes');
+
 // Enhanced MongoDB connection function
 const connectDB = async () => {
   try {
@@ -61,11 +75,77 @@ try {
   console.log("✅ Models loaded successfully");
 } catch (error) {
   console.error("❌ Failed to load models:", error.message);
-  process.exit(1);
+  throw new Error("Failed to load required models");
 }
 
 const app = express();
 const server = http.createServer(app);
+
+// Basic middleware setup
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  console.log('Request Body:', req.body);
+  next();
+});
+
+// CORS configuration - Must be before routes
+app.use(cors({
+  origin: [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://minor-project-university-connect-h83y.vercel.app",
+    "https://uniconnect.prasadshaswat.tech"
+  ],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
+
+// Mount all routes
+console.log('Mounting routes...');
+
+// Auth routes
+app.use('/api/auth', authRoutes);
+console.log('✅ Auth routes mounted');
+
+// Other routes with better logging
+app.use('/api/profile', profileRoutes);
+console.log('✅ Profile routes mounted at /api/profile');
+app.use('/api/students', studentRoutes);
+app.use('/api/services', serviceRoutes);
+app.use('/api/certifications', certificationRoutes);
+app.use('/api/questions', questionRoutes);
+app.use('/api/marketplace', talentMarketplaceRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/roadmap/gemini', aiRoadmapRoutes);
+app.use('/api/check-auth', checkAuthRoutes); // Add auth checking route
+app.use('/api/test', testRoutes); // Add test routes for debugging
+
+console.log('✅ All routes mounted successfully');
+
+// Log all requests
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
+});
+
+// 404 handler
+app.use((req, res) => {
+    console.log(`404 - Route not found: ${req.method} ${req.url}`);
+    console.log('Headers:', req.headers);
+    console.log('Body:', req.body);
+    res.status(404).json({ 
+        message: `Route not found: ${req.method} ${req.url}`,
+        timestamp: new Date().toISOString(),
+        path: req.url,
+        method: req.method
+    });
+});
 
 // Socket.IO setup
 const io = socketIo(server, {
@@ -81,58 +161,12 @@ const io = socketIo(server, {
   },
 });
 
-// CORS configuration
-app.use(
-  cors({
-    origin: [
-      "http://localhost:5173",
-      "http://localhost:3000",
-      "https://minor-project-university-connect-h83y.vercel.app",
-      "https://uniconnect.prasadshaswat.tech",
-    ],
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
-
-// Middleware for parsing JSON
-app.use(express.json());
-
 // Ensure the `certificates` folder exists
 const certificatesDir = path.join(__dirname, "certificates");
 if (!fs.existsSync(certificatesDir)) {
   fs.mkdirSync(certificatesDir);
 }
 console.log("JWT_SECRET:", process.env.JWT_SECRET); // Debugging log
-
-// ✅ Import Routes with error handling
-let authRoutes,
-  profileRoutes,
-  studentRoutes,
-  serviceRoutes,
-  certificationRoutes,
-  questionRoutes,
-  talentMarketplaceRoutes,
-  chatRoutes,
-  adminRoutes;
-
-try {
-  authRoutes = require("./routes/authRoutes");
-  profileRoutes = require("./routes/profileRoutes");
-  studentRoutes = require("./routes/studentRoutes");
-  serviceRoutes = require("./routes/serviceRoutes");
-  certificationRoutes = require("./routes/certificationRoutes");
-  questionRoutes = require("./routes/questionRoutes");
-  talentMarketplaceRoutes = require("./routes/talentMarketplace");
-  chatRoutes = require("./routes/chatRoutes");
-  adminRoutes = require("./routes/adminRoutes");
-  console.log("✅ Routes loaded successfully");
-} catch (error) {
-  console.error("❌ Failed to load routes:", error.message);
-  console.error("Stack trace:", error.stack);
-  process.exit(1);
-}
 
 // ✅ Health check endpoint
 app.get("/", (req, res) => {
@@ -158,7 +192,6 @@ app.get("/health", (req, res) => {
 
 // ✅ Use Routes with better error handling
 app.use("/api/auth", authRoutes);
-app.use("/api/users", profileRoutes);
 app.use(
   "/api/students",
   (req, res, next) => {
@@ -172,8 +205,7 @@ app.use(
   studentRoutes
 );
 app.use("/api/services", serviceRoutes);
-app.use("/api/certification", certificationRoutes);
-app.use("/api/certifications", certificationRoutes);
+app.use("/api/certification", certificationRoutes); // Keep this for backward compatibility
 app.use("/api/questions", questionRoutes);
 app.use("/api/talent-marketplace", talentMarketplaceRoutes);
 app.use("/api/chat", chatRoutes);
@@ -452,11 +484,8 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Add 404 handler
-app.use((req, res) => {
-  console.log("404 - Route not found:", req.method, req.path);
-  res.status(404).json({ message: "Route not found" });
-});
+// The 404 handler is already defined earlier in the file
+// No need for duplicate handler here
 
 const startServer = async () => {
   let retries = 5;
@@ -465,10 +494,13 @@ const startServer = async () => {
     try {
       // Connect to MongoDB
       await connectDB();
+      console.log('✅ MongoDB connected successfully');
 
       // Start server only after successful DB connection
       const PORT = process.env.PORT || 5000;
-      app.listen(PORT, () => {
+      
+      // Start the HTTP server instead of just the Express app
+      server.listen(PORT, () => {
         console.log(`🚀 Server running on port ${PORT}`);
         console.log(
           `🌐 Frontend URL: ${
@@ -479,16 +511,32 @@ const startServer = async () => {
           `📡 API URL: ${process.env.API_URL || `http://localhost:${PORT}`}`
         );
         console.log(`🔧 Environment: ${process.env.NODE_ENV || "development"}`);
+        console.log('🔌 Socket.IO initialized');
+      });
+
+      // Handle server errors
+      server.on('error', (error) => {
+        console.error('💥 Server error:', error);
+      });
+
+      // Handle WebSocket events
+      io.on('connection', (socket) => {
+        console.log('🔌 New WebSocket connection:', socket.id);
+        
+        socket.on('disconnect', () => {
+          console.log('🔌 Client disconnected:', socket.id);
+        });
       });
 
       break; // Exit retry loop on success
     } catch (error) {
       retries--;
       console.error(`💥 Failed to start server. ${retries} retries left.`);
+      console.error('Error details:', error);
 
       if (retries === 0) {
-        console.error("🚫 Max retries reached. Exiting...");
-        process.exit(1);
+        console.error("🚫 Max retries reached. Could not start server.");
+        throw new Error("Failed to start server after maximum retries");
       }
 
       console.log("⏳ Retrying in 5 seconds...");
@@ -496,6 +544,25 @@ const startServer = async () => {
     }
   }
 };
+
+// Handle process termination
+process.on('SIGTERM', () => {
+  console.log('🛑 SIGTERM received. Shutting down gracefully...');
+  server.close(() => {
+    console.log('💤 Server closed');
+    mongoose.connection.close(false, () => {
+      console.log('💤 MongoDB connection closed');
+    });
+  });
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('💥 UNCAUGHT EXCEPTION:', error);
+  server.close(() => {
+    console.log('Server closed due to uncaught exception');
+  });
+});
 
 // Start the server
 startServer();

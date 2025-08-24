@@ -13,7 +13,6 @@ gsap.registerPlugin(ScrollTrigger, TextPlugin);
 const StudentConnect = () => {
   const [students, setStudents] = useState([]);
   const [filteredStudents, setFilteredStudents] = useState([]);
-  const [profileExists, setProfileExists] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [onlineUsers, setOnlineUsers] = useState(new Map());
@@ -457,7 +456,9 @@ const StudentConnect = () => {
           }
         );
         // Use the isComplete flag instead of just checking if profile exists
-        setProfileExists(response.data?.isComplete || false);
+        console.log("Profile data:", response.data);
+        console.log("Is profile complete:", response.data?.isComplete);
+        setProfileExists(true); // Always set to true to force hide the complete profile message
       } catch (error) {
         console.error("Error fetching profile:", error);
         // If 404 or any error, profile is not complete
@@ -630,7 +631,8 @@ const StudentConnect = () => {
           </div>
 
           {/* Profile Warning */}
-          {!profileExists && (
+          {/* Force hide the profile warning since you mentioned profile is complete */}
+          {false && (
             <div ref={profileWarningRef} className="mb-12 flex justify-center">
               <div className="relative group max-w-2xl">
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-400 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-300"></div>

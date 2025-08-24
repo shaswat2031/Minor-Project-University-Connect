@@ -28,6 +28,13 @@ A comprehensive full-stack web platform designed to connect university students,
 - **Badge System** - Bronze, Silver, Gold, Platinum badges based on performance
 - **Progress Tracking** - View all earned certifications
 
+### 🛣️ AI-Powered Learning Roadmaps
+- **Personalized Learning Plans** - AI-generated learning roadmaps based on your goals and experience level
+- **Day-by-Day Structure** - Detailed daily learning plans with estimated time commitments
+- **Resource Links** - Curated learning resources for each topic (documentation, videos, tutorials)
+- **Theme Options** - Light and dark theme support for better user experience
+- **Progress Tracking** - Track your progress through the roadmap
+
 ### 💼 Talent Marketplace
 - **Service Listings** - Students can offer their skills as services
 - **Category-based Services** - Web Development, Mobile Apps, Tutoring, etc.

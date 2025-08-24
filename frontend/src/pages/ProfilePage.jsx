@@ -119,7 +119,7 @@ const ProfilePage = () => {
       setCertificationsLoading(true);
       try {
         const response = await axios.get(
-          `${import.meta.env.VITE_API_URL}/api/certification/user/${userId}`,
+          `${import.meta.env.VITE_API_URL}/api/certifications/user/${userId}`,
           {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token")}`,

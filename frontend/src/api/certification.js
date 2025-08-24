@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = `${import.meta.env.VITE_API_URL}/api/certification`;
+const API_URL = `${import.meta.env.VITE_API_URL}/api/certifications`;
 const USER_API_URL = `${import.meta.env.VITE_API_URL}/api/users`;
 
 export const fetchCertificationQuestions = async (category = "React") => {
@@ -73,7 +73,7 @@ export const submitCertificationAnswers = async (
 export const fetchUserCertifications = async (userId) => {
   try {
     const response = await axios.get(
-      `${import.meta.env.VITE_API_URL}/api/certification/user/${userId}`,
+      `${import.meta.env.VITE_API_URL}/api/certifications/user/${userId}`,
       {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       }
@@ -89,7 +89,7 @@ export const fetchUserCertifications = async (userId) => {
 export const fetchMyCertifications = async () => {
   try {
     const response = await axios.get(
-      `${import.meta.env.VITE_API_URL}/api/certification/my-certifications`,
+      `${import.meta.env.VITE_API_URL}/api/certifications/my-certifications`,
       {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       }
@@ -105,7 +105,7 @@ export const fetchMyCertifications = async () => {
 export const fetchCertificationLeaderboard = async () => {
   try {
     const response = await axios.get(
-      `${import.meta.env.VITE_API_URL}/api/certification/leaderboard`,
+      `${import.meta.env.VITE_API_URL}/api/certifications/leaderboard`,
       {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       }

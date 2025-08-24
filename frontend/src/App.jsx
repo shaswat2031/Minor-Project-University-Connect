@@ -1,4 +1,3 @@
-import React from "react";
 import { useEffect, useState } from "react";
 import {
   BrowserRouter as Router,
@@ -6,6 +5,7 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
+import React from 'react';
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Home from "./pages/Home";
@@ -24,6 +24,8 @@ import Messages from "./pages/Messages"; // Import Messages component
 import ChatButton from "./components/Chat/ChatButton";
 import AdminPanel from "./pages/AdminPanel";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
+import AIRoadmap from "./pages/AIRoadmap";
+import EnhancedProfilePage from "./pages/EnhancedProfilePage";
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -84,6 +86,16 @@ const App = () => {
           />
           <Route path="/profile-setup" element={<ProfileSetup />} />
           <Route path="/profile/:id" element={<ProfilePage />} />
+          <Route path="/enhanced-profile/:id" element={<EnhancedProfilePage />} />
+          <Route path="/enhanced-profile" element={<EnhancedProfilePage />} />
+          <Route
+            path="/ai-roadmap"
+            element={
+              <ProtectedRoute>
+                <AIRoadmap />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/certifications"
             element={

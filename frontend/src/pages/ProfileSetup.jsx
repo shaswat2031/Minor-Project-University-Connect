@@ -30,19 +30,93 @@ const ProfileSetup = () => {
   const fetchExistingProfile = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/users/profile`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      if (!token) {
+        console.log("No token found");
+        setProfile({});
+        return;
+      }
 
-      if (response.data) {
-        setProfile(response.data);
+      console.log("Fetching profile...");
+      console.log("API URL:", import.meta.env.VITE_API_URL);
+      console.log("Token:", token.substring(0, 10) + "...");
+      
+      // Try the profile API
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL}/api/profile/me`,
+          {
+            headers: { 
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+          }
+        );
+
+        console.log('Fetched profile data:', response.data);
+
+        if (response.data) {
+          setProfile(response.data);
+        }
+      } catch (apiError) {
+        console.error("API Error:", apiError.message);
+        
+        // If we can't reach the API, just create an empty profile for setup
+        console.log("Creating empty profile due to API error");
+        setProfile({
+          name: "",
+          bio: "",
+          skills: [],
+          education: [],
+          experience: [],
+          projects: [],
+          socialLinks: {
+            linkedin: "",
+            github: "",
+            instagram: "",
+            portfolio: ""
+          },
+          location: "",
+          profileImage: "",
+          coverImage: ""
+        });
       }
     } catch (error) {
-      console.log("No existing profile found, starting fresh");
-      setProfile({});
+      console.error("Unexpected error in fetchExistingProfile:", error);
+      // Fallback for any other errors
+      setProfile({
+        name: "",
+        bio: "",
+        skills: [],
+        education: [],
+        experience: [],
+        projects: [],
+        socialLinks: {
+          linkedin: "",
+          github: "",
+          instagram: "",
+          portfolio: ""
+        },
+        location: "",
+        profileImage: "",
+        coverImage: ""
+      });
+      setProfile({
+        name: "",
+        bio: "",
+        skills: [],
+        education: [],
+        experience: [],
+        projects: [],
+        socialLinks: {
+          linkedin: "",
+          github: "",
+          instagram: "",
+          portfolio: ""
+        },
+        location: "",
+        profileImage: "",
+        coverImage: ""
+      });
     }
   };
 
@@ -68,7 +142,7 @@ const ProfileSetup = () => {
       };
 
       const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/users/setup`,
+        `${import.meta.env.VITE_API_URL}/api/profile/setup`,
         processedData,
         { headers: { Authorization: `Bearer ${token}` } }
       );

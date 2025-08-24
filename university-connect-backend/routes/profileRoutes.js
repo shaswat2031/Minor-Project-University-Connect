@@ -1,8 +1,91 @@
 const express = require("express");
 const authMiddleware = require("../middleware/authMiddleware");
+const jwt = require("jsonwebtoken");
 const Profile = require("../models/Profile");
 
 const router = express.Router();
+
+// Get my profile (tolerant - returns empty profile if no/invalid token)
+router.get("/me", async (req, res) => {
+  try {
+    console.log("=== Profile Fetch Request ===");
+    console.log("Headers:", req.headers);
+
+    // Try to extract user id from Bearer token, but don't require it
+    let userId = null;
+    const authHeader = req.headers.authorization || req.headers.Authorization;
+    if (authHeader && typeof authHeader === 'string' && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.split(" ")[1];
+      try {
+        console.log("JWT_SECRET available:", !!process.env.JWT_SECRET);
+        console.log("Token to verify:", token.substring(0, 10) + "...");
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        console.log("Token decoded successfully:", decoded);
+        userId = decoded.id; // The token contains { id: user._id }
+        console.log("Decoded user id from token:", userId);
+      } catch (err) {
+        console.log("Token invalid or expired in /me route:", err.message);
+        userId = null; // treat as unauthenticated
+      }
+    }
+
+    // If unauthenticated, return empty profile structure (frontend expects this while setting up)
+    if (!userId) {
+      console.log("Unauthenticated request to /me - returning empty profile structure");
+      return res.json({
+        user: null,
+        name: "",
+        bio: "",
+        skills: [],
+        education: [],
+        experience: [],
+        projects: [],
+        socialLinks: {
+          linkedin: "",
+          github: "",
+          instagram: "",
+          portfolio: ""
+        },
+        location: "",
+        profileImage: "",
+        coverImage: ""
+      });
+    }
+
+    // Authenticated: fetch profile normally
+    const profile = await Profile.findOne({ user: userId }).populate('user', 'name email');
+    if (!profile) {
+      console.log("No profile found for user:", userId);
+      return res.json({
+        user: userId,
+        name: "",
+        bio: "",
+        skills: [],
+        education: [],
+        experience: [],
+        projects: [],
+        socialLinks: {
+          linkedin: "",
+          github: "",
+          instagram: "",
+          portfolio: ""
+        },
+        location: "",
+        profileImage: "",
+        coverImage: ""
+      });
+    }
+
+    console.log("Profile found:", profile._id);
+    res.json(profile);
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    res.status(500).json({ 
+      message: "Server error while fetching profile",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
 
 // Save or Update Profile
 router.post("/setup", authMiddleware, async (req, res) => {

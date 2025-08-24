@@ -7,6 +7,7 @@ import {
   FaTimes,
   FaUserShield,
   FaLock,
+  FaRobot,
 } from "react-icons/fa";
 
 const Navbar = ({ isAuthenticated, setIsAuthenticated }) => {
@@ -188,11 +189,44 @@ const Navbar = ({ isAuthenticated, setIsAuthenticated }) => {
                       className="absolute right-0 mt-3 w-52 bg-gradient-to-b from-[#131a2b] to-[#0a0f1d] border border-[#00fffc]/60 rounded-xl overflow-hidden shadow-lg shadow-[#00fffc]/20"
                     >
                       <Link
+                        to="/ai-roadmap"
+                        className="relative block py-3.5 px-4.5 font-semibold text-white overflow-hidden group"
+                        onClick={() => setDropdownOpen(false)}
+                      >
+                        <span className="relative z-10 flex items-center gap-2">
+                          <FaRobot className="text-[#00fffc]" />
+                          AI Roadmap
+                        </span>
+                        <motion.span
+                          initial={{ x: "-100%" }}
+                          whileHover={{ x: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className="absolute inset-0 bg-gradient-to-r from-[#00fffc]/20 to-transparent z-0"
+                        />
+                      </Link>
+                      <Link
                         to="/my-profile"
                         className="relative block py-3.5 px-4.5 font-semibold text-white overflow-hidden group"
                         onClick={() => setDropdownOpen(false)}
                       >
                         <span className="relative z-10">My Profile</span>
+                        <motion.span
+                          initial={{ x: "-100%" }}
+                          whileHover={{ x: 0 }}
+                          transition={{
+                            type: "tween",
+                            ease: "easeOut",
+                            duration: 0.3,
+                          }}
+                          className="absolute inset-0 bg-[#00fffc]/10"
+                        />
+                      </Link>
+                      <Link
+                        to="/enhanced-profile"
+                        className="relative block py-3.5 px-4.5 font-semibold text-white overflow-hidden group"
+                        onClick={() => setDropdownOpen(false)}
+                      >
+                        <span className="relative z-10">Enhanced Profile</span>
                         <motion.span
                           initial={{ x: "-100%" }}
                           whileHover={{ x: 0 }}

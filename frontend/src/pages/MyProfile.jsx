@@ -21,21 +21,27 @@ import {
   FaExternalLinkAlt,
 } from "react-icons/fa";
 import {
-  fetchMyCertifications,
   getBadgeColor,
   getBadgeEmoji,
 } from "../api/certification";
+import useCertifications from "../hooks/useCertifications";
 
 const MyProfile = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editing, setEditing] = useState(false);
-  const [certifications, setCertifications] = useState([]);
-  const [certificationsLoading, setCertificationsLoading] = useState(true);
   const [showCompleteMessage, setShowCompleteMessage] = useState(false);
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
+  
+  // Use the custom hook to fetch certifications
+  const { 
+    certifications, 
+    loading: certificationsLoading, 
+    error: certificationsError,
+    refresh: refreshCertifications 
+  } = useCertifications({ autoRefresh: true });
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -50,7 +56,7 @@ const MyProfile = () => {
 
       try {
         const response = await axios.get(
-          `${import.meta.env.VITE_API_URL}/api/users/profile`,
+          `${import.meta.env.VITE_API_URL}/api/profile/me`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -58,6 +64,10 @@ const MyProfile = () => {
 
         if (response.data) {
           setProfile(response.data);
+          // Show completion message if profile is not complete
+          if (response.data.completionPercentage < 100) {
+            setShowCompleteMessage(true);
+          }
         } else {
           // If no profile exists, redirect to profile setup
           navigate("/profile-setup");
@@ -75,61 +85,7 @@ const MyProfile = () => {
       }
     };
 
-    // Fetch user certifications with debug info
-    const fetchUserCertifications = async () => {
-      setCertificationsLoading(true);
-      try {
-        const token = localStorage.getItem("token");
-        const userId = localStorage.getItem("userId");
-
-        console.log("Fetching certifications with:", {
-          token: !!token,
-          userId,
-        });
-
-        // First, let's debug what data exists
-        const debugResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL}/api/certification/debug/user-data`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
-        console.log("Debug user data:", debugResponse.data);
-
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_URL}/api/certification/my-certifications`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
-        console.log("Fetched certifications response:", response.data);
-
-        if (
-          response.data.certifications &&
-          response.data.certifications.length > 0
-        ) {
-          setCertifications(response.data.certifications);
-          console.log("Set certifications:", response.data.certifications);
-        } else {
-          console.log(
-            "No certifications found, checking certification records..."
-          );
-          // If no certifications in profile, check if there are any certification records
-          // and rebuild the profile
-          setCertifications([]);
-        }
-      } catch (error) {
-        console.error("Error fetching certifications:", error);
-        setCertifications([]);
-      } finally {
-        setCertificationsLoading(false);
-      }
-    };
-
     fetchProfile();
-    fetchUserCertifications();
   }, [navigate]);
 
   const handleSave = async (e) => {
@@ -195,40 +151,42 @@ const MyProfile = () => {
     const updatedEducation = profile.education.filter((_, i) => i !== index);
     setProfile({ ...profile, education: updatedEducation });
   };
-
-  const getCertificationIcon = (category) => {
-    const icons = {
-      React: "⚛️",
-      Java: "☕",
-      Python: "🐍",
-      JavaScript: "🚀",
-      "Data Structures": "🏗️",
-      Algorithms: "🧮",
-      "Web Development": "🌐",
-    };
-    return icons[category] || "📜";
-  };
-
-  const getCertificationColor = (category) => {
-    const colors = {
-      React: "from-blue-500 to-cyan-400",
-      Java: "from-orange-500 to-red-500",
-      Python: "from-green-500 to-teal-400",
-      JavaScript: "from-yellow-500 to-orange-400",
-      "Data Structures": "from-purple-500 to-pink-500",
-      Algorithms: "from-indigo-500 to-purple-500",
-      "Web Development": "from-pink-500 to-rose-400",
-    };
-    return colors[category] || "from-gray-500 to-gray-600";
-  };
-
-  const getPerformanceGrade = (percentage) => {
-    if (percentage >= 90)
-      return { grade: "Excellence", color: "text-green-400" };
-    if (percentage >= 80)
-      return { grade: "Distinction", color: "text-blue-400" };
-    if (percentage >= 70) return { grade: "Merit", color: "text-purple-400" };
-    return { grade: "Pass", color: "text-gray-400" };
+  
+  // Format certification date with validation
+  const formatCertDate = (dateStr) => {
+    if (!dateStr) return 'Date not available';
+    
+    try {
+      // Handle different date formats
+      let date;
+      
+      // If it's a timestamp string
+      if (typeof dateStr === 'string' && /^\d+$/.test(dateStr)) {
+        date = new Date(parseInt(dateStr));
+      } 
+      // If it's an ISO string
+      else if (typeof dateStr === 'string' && dateStr.includes('T')) {
+        date = new Date(dateStr);
+      }
+      // If it's already a Date object
+      else if (dateStr instanceof Date) {
+        date = dateStr;
+      }
+      // Fallback
+      else {
+        date = new Date(dateStr);
+      }
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return 'Invalid date';
+      }
+      
+      return date.toLocaleDateString();
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Date error';
+    }
   };
 
   const getSocialIcon = (platform) => {
@@ -641,38 +599,70 @@ const MyProfile = () => {
             </div>
 
             {/* Photos */}
+          
+            
+            {/* Certifications Section */}
             <div className="bg-gray-800/50 rounded-lg p-6 backdrop-blur-sm">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold flex items-center gap-3">
-                  <FaCamera className="text-pink-400" />
-                  Photos
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.715-5.349L11 6.477V16h2a1 1 0 110 2H7a1 1 0 110-2h2V6.477L6.237 7.582l1.715 5.349a1 1 0 01-.285 1.05A3.989 3.989 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.616a1 1 0 01.894-1.79l1.599.8L9 4.323V3a1 1 0 011-1zm-5 8.274l-.818 2.552c.25.112.526.174.818.174.292 0 .569-.062.818-.174L5 10.274zm10 0l-.818 2.552c.25.112.526.174.818.174.292 0 .569-.062.818-.174L15 10.274z" clipRule="evenodd" />
+                  </svg>
+                  Your Certifications
                 </h2>
-                <button className="text-blue-400 hover:text-blue-300">
-                  <FaPlus />
-                </button>
+                <Link to="/certifications" className="text-blue-400 hover:text-blue-300 flex items-center gap-1">
+                  <FaPlus size={14} />
+                  <span className="text-sm">Take Test</span>
+                </Link>
               </div>
 
-              {profile?.photos && profile.photos.length > 0 ? (
-                <div className="grid grid-cols-2 gap-2">
-                  {profile.photos.map((photo, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={photo.url}
-                        alt={photo.caption || `Photo ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-lg"
-                      />
-                      {photo.caption && (
-                        <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-xs p-2 rounded-b-lg">
-                          {photo.caption}
+              {certificationsLoading ? (
+                <div className="flex justify-center py-6">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                </div>
+              ) : certificationsError ? (
+                <div className="text-center py-4 text-red-400">
+                  Error loading certifications: {certificationsError.message}
+                </div>
+              ) : certifications && certifications.length > 0 ? (
+                <div className="grid grid-cols-1 gap-3">
+                  {certifications.map((cert, index) => (
+                    <div key={index} className="bg-gray-700/50 rounded-lg p-4 hover:bg-gray-700/70 transition-colors">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h3 className="font-semibold text-lg">{cert.category}</h3>
+                          
+                          <div className="mt-2">
+                            <span 
+                              className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                cert.score >= 80 
+                                ? 'bg-green-900/40 text-green-300 border border-green-500/30' 
+                                : cert.score >= 60 
+                                ? 'bg-yellow-900/40 text-yellow-300 border border-yellow-500/30' 
+                                : 'bg-red-900/40 text-red-300 border border-red-500/30'
+                            }`}
+                          >
+                            {cert.score}% Score {getBadgeEmoji ? getBadgeEmoji(cert.score) : "🎯"}
+                          </span>
                         </div>
-                      )}
+                      </div>
                     </div>
+                  </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-400 text-center py-8">
-                  No photos added yet
-                </p>
+                <div className="text-center py-8">
+                  <p className="text-gray-400 mb-4">You haven&apos;t earned any certifications yet</p>
+                  <Link
+                    to="/certifications"
+                    className="bg-blue-600 hover:bg-blue-700 px-5 py-2 rounded-lg inline-flex items-center gap-2 transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    Take a Certification Test
+                  </Link>
+                </div>
               )}
             </div>
           </div>

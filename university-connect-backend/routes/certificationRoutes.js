@@ -11,6 +11,19 @@ const jwt = require("jsonwebtoken");
 const authMiddleware = require("../middleware/authMiddleware");
 const VM = require("vm");
 
+// Debug route to get user certification data
+router.get("/debug/user-data", authMiddleware, async (req, res) => {
+  try {
+    const certifications = await Certification.find({ user: req.user.id })
+      .populate("user", "name email")
+      .sort({ createdAt: -1 });
+    res.json(certifications);
+  } catch (error) {
+    console.error("Error fetching user certifications:", error);
+    res.status(500).json({ message: "Error fetching certifications" });
+  }
+});
+
 // Custom auth middleware that allows test tokens
 const authOrTest = (req, res, next) => {
   const authHeader = req.header("Authorization");

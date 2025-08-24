@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // ✅ Use Environment Variable for API URL (Fallback to Localhost)
-const API_BASE_URL = `${import.meta.env.VITE_API_URL}/api/certification`;
+const API_BASE_URL = `${import.meta.env.VITE_API_URL}/api/certifications`;
 
 // ✅ Fetch Only React Certification Questions
 export const fetchCertificationQuestions = async (category = "React") => {

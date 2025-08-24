@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import PropTypes from 'prop-types';
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FaUser,
@@ -15,25 +16,86 @@ import {
 } from "react-icons/fa";
 import CertificationBadge from "./CertificationBadge";
 
+// PropTypes definition for the profile object
+const profileShape = {
+  name: PropTypes.string,
+  bio: PropTypes.string,
+  location: PropTypes.string,
+  skills: PropTypes.arrayOf(PropTypes.string),
+  education: PropTypes.arrayOf(PropTypes.shape({
+    school: PropTypes.string,
+    degree: PropTypes.string,
+    field: PropTypes.string,
+    startDate: PropTypes.string,
+    endDate: PropTypes.string,
+  })),
+  experience: PropTypes.arrayOf(PropTypes.shape({
+    company: PropTypes.string,
+    position: PropTypes.string,
+    description: PropTypes.string,
+    startDate: PropTypes.string,
+    endDate: PropTypes.string,
+  })),
+  projects: PropTypes.arrayOf(PropTypes.shape({
+    name: PropTypes.string,
+    description: PropTypes.string,
+    technologies: PropTypes.arrayOf(PropTypes.string),
+    link: PropTypes.string,
+  })),
+  socialLinks: PropTypes.shape({
+    linkedin: PropTypes.string,
+    github: PropTypes.string,
+    instagram: PropTypes.string,
+    portfolio: PropTypes.string,
+  }),
+  profileImage: PropTypes.string,
+  coverImage: PropTypes.string,
+};
+
 const ProfileBuilder = ({ profile, onSave, onCancel }) => {
+  // Use JavaScript default parameter instead of defaultProps
+  profile = profile || {};
   const [currentStep, setCurrentStep] = useState(0);
-  const [formData, setFormData] = useState({
-    name: "",
-    bio: "",
-    location: "",
-    skills: [],
-    education: [],
-    experience: [],
-    projects: [],
+  const [formData, setFormData] = useState(() => ({
+    name: profile.name || "",
+    bio: profile.bio || "",
+    location: profile.location || "",
+    skills: profile.skills || [],
+    education: profile.education || [],
+    experience: profile.experience || [],
+    projects: profile.projects || [],
     socialLinks: {
-      linkedin: "",
-      github: "",
-      instagram: "",
-      portfolio: "",
+      linkedin: profile.socialLinks?.linkedin || "",
+      github: profile.socialLinks?.github || "",
+      instagram: profile.socialLinks?.instagram || "",
+      portfolio: profile.socialLinks?.portfolio || "",
     },
-    profileImage: "",
-    coverImage: "",
-  });
+    profileImage: profile.profileImage || "",
+    coverImage: profile.coverImage || "",
+  }));
+
+  // Update form data when profile prop changes
+  useEffect(() => {
+    if (profile) {
+      setFormData(prevData => ({
+        name: profile.name || prevData.name,
+        bio: profile.bio || prevData.bio,
+        location: profile.location || prevData.location,
+        skills: profile.skills || prevData.skills,
+        education: profile.education || prevData.education,
+        experience: profile.experience || prevData.experience,
+        projects: profile.projects || prevData.projects,
+        socialLinks: {
+          linkedin: profile.socialLinks?.linkedin || prevData.socialLinks.linkedin,
+          github: profile.socialLinks?.github || prevData.socialLinks.github,
+          instagram: profile.socialLinks?.instagram || prevData.socialLinks.instagram,
+          portfolio: profile.socialLinks?.portfolio || prevData.socialLinks.portfolio,
+        },
+        profileImage: profile.profileImage || prevData.profileImage,
+        coverImage: profile.coverImage || prevData.coverImage,
+      }));
+    }
+  }, [profile]);
 
   const steps = [
     { id: "basic", title: "Basic Info", icon: FaUser },
@@ -926,6 +988,12 @@ const ProfileBuilder = ({ profile, onSave, onCancel }) => {
       </div>
     </div>
   );
+};
+
+ProfileBuilder.propTypes = {
+  profile: PropTypes.shape(profileShape),
+  onSave: PropTypes.func.isRequired,
+  onCancel: PropTypes.func.isRequired,
 };
 
 export default ProfileBuilder;
