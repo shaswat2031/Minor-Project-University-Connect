@@ -16,8 +16,10 @@ import {
   submitCertificationAnswers,
   fetchUserProfile,
 } from "../api/certification";
+import { executeCodingTest, runAllTestCases } from "../api/codingService";
 import jsPDF from "jspdf";
 import Confetti from "react-confetti";
+import CodeEditor from "../components/CodeEditor"; // Import our custom CodeEditor component
 
 const Certifications = () => {
   const [activeTab, setActiveTab] = useState("available");
@@ -51,6 +53,21 @@ const Certifications = () => {
   const [codingValidationStatus, setCodingValidationStatus] = useState({});
   const [showCodingTestModal, setShowCodingTestModal] = useState(false);
   const [currentCodingQuestion, setCurrentCodingQuestion] = useState(null);
+  // Add a state to track if all tests have been checked
+  const [allTestsRun, setAllTestsRun] = useState(false);
+
+  // Check if all tests are passing whenever codingValidationStatus changes
+  useEffect(() => {
+    if (questions.length > 0) {
+      const codingQuestions = questions.filter(q => q.type === "coding");
+      const allCodingValidated = codingQuestions.every((q, index) => {
+        const questionIndex = questions.findIndex(quest => quest._id === q._id);
+        return codingValidationStatus[questionIndex];
+      });
+      
+      setAllTestsRun(allCodingValidated || codingQuestions.length === 0);
+    }
+  }, [questions, codingValidationStatus]);
 
   const categories = [
     {
@@ -526,34 +543,36 @@ const Certifications = () => {
 
     try {
       setLoading(true);
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/certifications/coding/execute`,
-        {
-          code: answers[questionIndex] || question.starterCode || "",
-          language: "JavaScript", // Default to JavaScript for now
-          questionId: question._id,
-          testCaseIndex,
-        },
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
+      const response = await executeCodingTest(
+        answers[questionIndex] || question.starterCode || "",
+        question.language || "JavaScript",
+        question._id,
+        testCaseIndex
       );
 
       setCodingTestResults(prev => ({
         ...prev,
-        [`${questionIndex}-${testCaseIndex}`]: response.data
+        [`${questionIndex}-${testCaseIndex}`]: response
       }));
 
-      // Check if all test cases pass
-      const allTestCasesPassed = question.testCases?.every((_, idx) => {
-        const result = codingTestResults[`${questionIndex}-${idx}`];
-        return result && result.passed;
-      });
+      // Check if all test cases pass - safely check for testCases
+      if (question.testCases && question.testCases.length > 0) {
+        const allTestCasesPassed = question.testCases.every((_, idx) => {
+          const result = codingTestResults[`${questionIndex}-${idx}`];
+          return result && result.passed;
+        });
 
-      setCodingValidationStatus(prev => ({
-        ...prev,
-        [questionIndex]: allTestCasesPassed
-      }));
+        setCodingValidationStatus(prev => ({
+          ...prev,
+          [questionIndex]: allTestCasesPassed
+        }));
+      } else {
+        // If there are no test cases, consider it as validated
+        setCodingValidationStatus(prev => ({
+          ...prev,
+          [questionIndex]: true
+        }));
+      }
 
     } catch (error) {
       console.error("Error running coding test:", error);
@@ -569,11 +588,98 @@ const Certifications = () => {
 
     try {
       setLoading(true);
-      const promises = question.testCases?.map((_, testCaseIndex) =>
-        runCodingTest(questionIndex, testCaseIndex)
-      ) || [];
-
-      await Promise.all(promises);
+      
+      // Debug logging
+      console.log("Question data:", question);
+      
+      // Get test cases from the question or create a single dummy test case
+      // This handles different API response formats
+      let testCases = [];
+      
+      if (question.testCases && Array.isArray(question.testCases) && question.testCases.length > 0) {
+        console.log("Found test cases in question.testCases:", question.testCases);
+        testCases = question.testCases;
+      } else if (question.testcases && Array.isArray(question.testcases) && question.testcases.length > 0) {
+        // Handle lowercase property name variation
+        console.log("Found test cases in question.testcases:", question.testcases);
+        testCases = question.testcases;
+      } else if (question.test_cases && Array.isArray(question.test_cases) && question.test_cases.length > 0) {
+        // Handle snake_case property name variation
+        console.log("Found test cases in question.test_cases:", question.test_cases);
+        testCases = question.test_cases;
+      } else {
+        // Create a dummy test case for validation
+        console.log("Creating a dummy test case for validation");
+        
+        // Create an appropriate test case based on language
+        if (question.language === "Java") {
+          testCases = [{
+            id: "dummy-test",
+            input: "3 5",
+            expectedOutput: "8",
+            isHidden: false
+          }];
+          console.log("Created Java test case");
+        } else if (question.language === "Python") {
+          testCases = [{
+            id: "dummy-test",
+            input: "3 5",
+            expectedOutput: "8",
+            isHidden: false
+          }];
+          console.log("Created Python test case");
+        } else {
+          // Default JavaScript test case
+          testCases = [{
+            id: "dummy-test",
+            input: "3 5",
+            expectedOutput: "8",
+            isHidden: false
+          }];
+          console.log("Created JavaScript test case");
+        }
+      }
+      
+      // Get the code from the answers or starter code
+      const code = answers[questionIndex] || question.starterCode || "";
+      
+      // Make sure to use the correct language from the question
+      const language = question.language || question.category || "JavaScript";
+      console.log(`Using language: ${language} for question ID: ${question._id}`);
+      
+      // Use our new service to run all test cases
+      const results = await runAllTestCases(
+        code, 
+        language, 
+        question._id, 
+        testCases
+      );
+      
+      // Update the results state
+      results.forEach((result, i) => {
+        setCodingTestResults(prev => ({
+          ...prev,
+          [`${questionIndex}-${i}`]: result
+        }));
+      });
+      
+      // Check if all test cases passed
+      const allTestCasesPassed = results.every(result => result && result.passed);
+      
+      // Store the test cases on the question object for UI rendering
+      const updatedQuestions = [...questions];
+      if (!updatedQuestions[questionIndex].testCases || updatedQuestions[questionIndex].testCases.length === 0) {
+        updatedQuestions[questionIndex].testCases = testCases;
+        setQuestions(updatedQuestions);
+        console.log("Updated question with test cases:", updatedQuestions[questionIndex]);
+      }
+      
+      // Update validation status
+      setCodingValidationStatus(prev => ({
+        ...prev,
+        [questionIndex]: allTestCasesPassed
+      }));
+      
     } catch (error) {
       console.error("Error running all coding tests:", error);
     } finally {
@@ -912,81 +1018,122 @@ const Certifications = () => {
                 )}
                 
                 {/* Test Cases Section */}
-                {currentQ?.testCases && currentQ.testCases.length > 0 && (
-                  <div className="bg-gray-700 p-4 rounded-lg mb-4">
-                    <div className="flex justify-between items-center mb-3">
-                      <h4 className="text-white font-semibold">Test Cases</h4>
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => runAllCodingTests(currentQuestion)}
-                          disabled={loading}
-                          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded text-sm flex items-center space-x-1"
-                        >
-                          <FaPlay className="text-xs" />
-                          <span>Run All Tests</span>
-                        </button>
-                        <button
-                          onClick={() => openCodingTestModal(currentQuestion)}
-                          className="px-3 py-1 bg-purple-600 hover:bg-purple-700 rounded text-sm"
-                        >
-                          View Test Cases
-                        </button>
-                      </div>
-                    </div>
-                    
-                    {/* Test Status Summary */}
-                    <div className="flex space-x-4 text-sm mb-3">
-                      <span className="text-gray-400">
-                        Total: {currentQ.testCases.length}
-                      </span>
-                      <span className="text-green-400">
-                        Passed: {currentQ.testCases.filter((_, idx) => {
-                          const result = codingTestResults[`${currentQuestion}-${idx}`];
-                          return result && result.passed;
-                        }).length}
-                      </span>
-                      <span className="text-red-400">
-                        Failed: {currentQ.testCases.filter((_, idx) => {
-                          const result = codingTestResults[`${currentQuestion}-${idx}`];
-                          return result && !result.passed;
-                        }).length}
-                      </span>
-                    </div>
-
-                    {/* Validation Status */}
-                    {codingValidationStatus[currentQuestion] !== undefined && (
-                      <div className={`flex items-center space-x-2 text-sm ${
-                        codingValidationStatus[currentQuestion] 
-                          ? "text-green-400" 
-                          : "text-red-400"
-                      }`}>
-                        {codingValidationStatus[currentQuestion] ? (
-                          <FaCheck />
+                <div className="bg-gray-700 p-4 rounded-lg mb-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <h4 className="text-white font-semibold">Test Cases</h4>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => runAllCodingTests(currentQuestion)}
+                        disabled={loading}
+                        className={`px-3 py-1.5 ${
+                          codingValidationStatus[currentQuestion]
+                            ? "bg-green-600 hover:bg-green-700"
+                            : "bg-blue-600 hover:bg-blue-700"
+                        } disabled:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-70 rounded text-sm flex items-center space-x-1 transition-all`}
+                      >
+                        {loading ? (
+                          <div className="animate-spin h-3 w-3 border-2 border-white border-t-transparent rounded-full mr-1"></div>
+                        ) : codingValidationStatus[currentQuestion] ? (
+                          <FaCheck className="text-xs" />
                         ) : (
-                          <FaExclamationTriangle />
+                          <FaPlay className="text-xs" />
                         )}
-                        <span>
-                          {codingValidationStatus[currentQuestion] 
-                            ? "All test cases passed" 
-                            : "Some test cases failed"}
-                        </span>
-                      </div>
-                    )}
+                        <span>{loading ? "Running..." : codingValidationStatus[currentQuestion] ? "All Tests Passed" : "Run All Tests"}</span>
+                      </button>
+                      <button
+                        onClick={() => openCodingTestModal(currentQuestion)}
+                        className="px-3 py-1 bg-purple-600 hover:bg-purple-700 rounded text-sm"
+                      >
+                        View Test Cases
+                      </button>
+                    </div>
                   </div>
-                )}
+                  
+                  {/* Test Status Summary */}
+                  <div className="flex space-x-4 text-sm mb-3">
+                    <span className="text-gray-400">
+                      Total: {currentQ?.testCases?.length || 0}
+                    </span>
+                    <span className="text-green-400">
+                      Passed: {currentQ?.testCases?.filter((_, idx) => {
+                        const result = codingTestResults[`${currentQuestion}-${idx}`];
+                        return result && result.passed;
+                      })?.length || 0}
+                    </span>
+                    <span className="text-red-400">
+                      Failed: {currentQ?.testCases?.filter((_, idx) => {
+                        const result = codingTestResults[`${currentQuestion}-${idx}`];
+                        return result && !result.passed;
+                      })?.length || 0}
+                    </span>
+                  </div>
 
-                <div className="mb-4">
+                  {/* Validation Status */}
+                  {codingValidationStatus[currentQuestion] !== undefined && (
+                    <div className={`flex items-center space-x-2 text-sm ${
+                      codingValidationStatus[currentQuestion] 
+                        ? "text-green-400" 
+                        : "text-red-400"
+                    }`}>
+                      {codingValidationStatus[currentQuestion] ? (
+                        <FaCheck />
+                      ) : (
+                        <FaExclamationTriangle />
+                      )}
+                      <span>
+                        {codingValidationStatus[currentQuestion] 
+                          ? "All test cases passed" 
+                          : "Some test cases failed"}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mb-2">
                   <label className="block text-gray-300 mb-2">
                     Your Solution:
                   </label>
-                  <textarea
-                    value={
-                      answers[currentQuestion] || currentQ?.starterCode || ""
-                    }
-                    onChange={(e) => handleCodingAnswer(e.target.value)}
-                    className="w-full h-64 p-4 bg-gray-900 text-white font-mono text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Write your code here..."
-                  />
+                  <div className="h-64 rounded-lg overflow-hidden border border-gray-700">
+                    <CodeEditor
+                      height="100%"
+                      language={currentQ?.language || "javascript"}
+                      value={answers[currentQuestion] || currentQ?.starterCode || ""}
+                      onChange={(value) => handleCodingAnswer(value)}
+                      readOnly={loading}
+                      options={{
+                        wordWrap: 'on',
+                        lineNumbers: 'on',
+                        scrollBeyondLastLine: false
+                      }}
+                    />
+                  </div>
+                </div>
+                
+                {/* Prominent Run Tests Button */}
+                <div className="mb-4">
+                  <button
+                    onClick={() => runAllCodingTests(currentQuestion)}
+                    disabled={loading}
+                    className={`w-full py-3 flex items-center justify-center gap-2 rounded-lg font-semibold ${
+                      codingValidationStatus[currentQuestion]
+                        ? "bg-green-600 hover:bg-green-700 text-white"
+                        : "bg-blue-600 hover:bg-blue-700 text-white"
+                    } transition-all duration-200 disabled:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-70`}
+                  >
+                    {loading ? (
+                      <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                    ) : codingValidationStatus[currentQuestion] ? (
+                      <FaCheck className="text-sm" />
+                    ) : (
+                      <FaPlay className="text-sm" />
+                    )}
+                    <span>{loading 
+                      ? "Running Tests..." 
+                      : codingValidationStatus[currentQuestion] 
+                        ? "All Tests Passed ✓" 
+                        : "Run All Tests"}
+                    </span>
+                  </button>
                 </div>
               </>
             )}
@@ -1026,12 +1173,35 @@ const Certifications = () => {
             </div>
 
             {currentQuestion === questions.length - 1 ? (
-              <button
-                onClick={handleSubmit}
-                className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold"
-              >
-                Submit Test
-              </button>
+              <div className="space-y-2">
+                {!allTestsRun && questions.some(q => q.type === "coding") && (
+                  <div className="bg-yellow-800/30 border border-yellow-500/50 text-yellow-400 p-3 rounded-lg text-center">
+                    <FaExclamationTriangle className="inline-block mr-2" />
+                    Please run and pass all test cases before submitting
+                  </div>
+                )}
+                <button
+                  onClick={handleSubmit}
+                  disabled={!allTestsRun && questions.some(q => q.type === "coding")}
+                  className={`px-6 py-4 w-full flex items-center justify-center gap-2 ${
+                    !allTestsRun && questions.some(q => q.type === "coding")
+                      ? "bg-gray-600 cursor-not-allowed"
+                      : "bg-green-600 hover:bg-green-700"
+                  } text-white rounded-lg transition font-semibold text-lg`}
+                >
+                  {!allTestsRun && questions.some(q => q.type === "coding") ? (
+                    <>
+                      <FaPlay />
+                      <span>Run All Tests First</span>
+                    </>
+                  ) : (
+                    <>
+                      <FaCheck />
+                      <span>Submit Test</span>
+                    </>
+                  )}
+                </button>
+              </div>
             ) : (
               <button
                 onClick={handleNext}
