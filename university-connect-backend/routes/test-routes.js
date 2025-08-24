@@ -62,4 +62,19 @@ router.get('/echo', (req, res) => {
   });
 });
 
+// Test the AI Roadmap API functionality
+router.get('/ai-roadmap', async (req, res) => {
+  try {
+    console.log('Testing AI Roadmap endpoint...');
+    res.json({
+      message: 'AI Roadmap test route is working!',
+      testStatus: 'This endpoint is accessible without authentication or Perplexity API key',
+      note: 'Use this to verify your connection to the backend.'
+    });
+  } catch (error) {
+    console.error('Error in AI roadmap test:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
 module.exports = router;

@@ -123,6 +123,7 @@ app.use('/api/marketplace', talentMarketplaceRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/roadmap/gemini', aiRoadmapRoutes);
+app.use('/api/learning-path', aiRoadmapRoutes); // Alternative path that might not be blocked
 app.use('/api/check-auth', checkAuthRoutes); // Add auth checking route
 app.use('/api/test', testRoutes); // Add test routes for debugging
 
