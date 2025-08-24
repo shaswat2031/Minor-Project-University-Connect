@@ -1,8 +1,9 @@
 import axios from 'axios';
 
 // Set base URL for API requests
-const BASE_URL = 'http://localhost:5000'; // backend runs on port 5000
-const API_URL = `${BASE_URL}/api/roadmap/gemini`;
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://minor-project-university-connect.onrender.com';
+// Try using an alternative path that might not be blocked by browser extensions
+const API_URL = `${BASE_URL}/api/learning-path`;
 
 // Configure axios defaults
 axios.defaults.baseURL = BASE_URL;
