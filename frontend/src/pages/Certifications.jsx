@@ -1,16 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { FaExclamationTriangle, FaEye, FaWindowClose } from "react-icons/fa";
+import PropTypes from 'prop-types';
+import { FaExclamationTriangle, FaDownload, FaCode, FaPlay, FaQuestionCircle, FaCheck, FaTimes } from "react-icons/fa";
 import axios from "axios";
-import {
-  FaCertificate,
-  FaCode,
-  FaTimes,
-  FaPlay,
-  FaStop,
-  FaQuestionCircle,
-  FaCheck,
-} from "react-icons/fa";
+import { Page, Text, View, Document, StyleSheet, PDFDownloadLink, Font } from '@react-pdf/renderer';
+import { format } from 'date-fns';
 import {
   fetchUserProfile,
 } from "../api/certification";
@@ -21,34 +15,222 @@ import CodeEditor from "../components/CodeEditor"; // Import our custom CodeEdit
 
 import ExamSecurity from '../components/ExamSecurity';
 
+// Define styles for the certificate
+const styles = StyleSheet.create({
+  page: {
+    padding: 40,
+    backgroundColor: '#FFFFFF',
+    position: 'relative',
+    width: '842pt',  // A4 landscape width
+    height: '595pt'  // A4 landscape height
+  },
+  border: {
+    position: 'absolute',
+    top: 25,
+    left: 25,
+    right: 25,
+    bottom: 25,
+    borderColor: '#C4A962',
+    borderWidth: 2,
+    borderStyle: 'solid',
+    borderRadius: 2
+  },
+  innerBorder: {
+    position: 'absolute',
+    top: 35,
+    left: 35,
+    right: 35,
+    bottom: 35,
+    borderColor: '#C4A962',
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderRadius: 1
+  },
+  decorator: {
+    fontSize: 20,
+    textAlign: 'center',
+    color: '#C4A962',
+    marginVertical: 5,
+    fontFamily: 'Times-Roman'
+  },
+  header: {
+    fontSize: 38,
+    textAlign: 'center',
+    marginTop: 30,
+    marginBottom: 0,
+    color: '#C4A962',
+    fontFamily: 'Times-Bold',
+    letterSpacing: 2
+  },
+  subHeader: {
+    fontSize: 20,
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#666666',
+    fontFamily: 'Times-Roman',
+    letterSpacing: 1,
+  },
+  content: {
+    fontSize: 16,
+    marginBottom: 10,
+    lineHeight: 1.4,
+    textAlign: 'center',
+    color: '#2D3748',
+  },
+  name: {
+    fontSize: 36,
+    textAlign: 'center',
+    marginVertical: 15,
+    color: '#C4A962',
+    fontFamily: 'Times-Roman',
+    fontStyle: 'italic',
+  },
+  score: {
+    fontSize: 18,
+    textAlign: 'center',
+    marginTop: 10,
+    marginBottom: 20,
+    color: '#4A5568',
+    fontFamily: 'Times-Bold',
+  },
+  dateContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 30,
+    paddingHorizontal: 100,
+  },
+  dateLabel: {
+    fontSize: 14,
+    color: '#4A5568',
+    textAlign: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#C4A962',
+    paddingTop: 5,
+    width: 150,
+  },
+  signature: {
+    fontSize: 32,
+    textAlign: 'center',
+    color: '#C4A962',
+    fontFamily: 'Times-Roman',
+    marginTop: 20,
+    letterSpacing: 1,
+    fontStyle: 'italic',
+  },
+  certId: {
+    position: 'absolute',
+    bottom: 30,
+    right: 35,
+    fontSize: 10,
+    color: '#718096',
+  },
+  decoratorBottom: {
+    fontSize: 24,
+    color: '#C4A962',
+    textAlign: 'center',
+    marginVertical: 10,
+  }
+});
+
+// Certificate Document Component
+const CertificateDocument = ({ name, result, category }) => {
+  CertificateDocument.propTypes = {
+    name: PropTypes.string.isRequired,
+    result: PropTypes.shape({
+      score: PropTypes.number.isRequired,
+      totalQuestions: PropTypes.number.isRequired,
+      id: PropTypes.string
+    }).isRequired,
+    category: PropTypes.string.isRequired
+  };
+
+  const currentDate = format(new Date(), 'MMMM dd, yyyy');
+  const certificateId = result.id || Math.random().toString(36).substr(2, 9);
+
+  
+  return (
+  <Document>
+    <Page size="A4" orientation="landscape" style={styles.page}>
+      {/* Decorative Borders */}
+      <View style={styles.border} />
+      <View style={styles.innerBorder} />
+      
+      {/* Certificate Header */}
+      <Text style={styles.header}>CERTIFICATE</Text>
+      <Text style={styles.subHeader}>OF COMPLETION</Text>
+
+      {/* Main Content */}
+      <View style={styles.content}>
+        <Text>This is to certify that</Text>
+        <Text style={styles.name}>{name}</Text>
+        <Text>
+          has successfully completed the {category} certification examination
+          with distinction, achieving
+        </Text>
+        <Text style={styles.score}>
+          {result.score} out of {result.totalQuestions} ({((result.score/result.totalQuestions) * 100).toFixed(1)}%)
+        </Text>
+      </View>
+
+      {/* Date and Signature Section */}
+      <View style={styles.dateContainer}>
+        <Text style={styles.dateLabel}>{currentDate}</Text>
+        <Text style={styles.dateLabel}>Signature</Text>
+      </View>
+
+      {/* Signature */}
+      <Text style={styles.signature}>UniConnect</Text>
+      <Text style={[styles.content, { fontSize: 12, marginTop: 8, color: '#666666' }]}>
+        CEO, University Connect
+      </Text>
+
+      {/* Certificate ID */}
+      <Text style={styles.certId}>
+        Certificate ID: {certificateId}
+      </Text>
+
+
+    </Page>
+  </Document>
+  );
+};
+
 const Certifications = () => {
-  const [activeTab, setActiveTab] = useState("available");
-  const [certifications, setCertifications] = useState([]);
-  const [activeCertification, setActiveCertification] = useState(null);
+  // Question-related state
   const [questions, setQuestions] = useState([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [timeRemaining, setTimeRemaining] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState("");
+  
+  // Exam state
+  const [timeRemaining, setTimeRemaining] = useState(1800); // 30 minutes
   const [examStarted, setExamStarted] = useState(false);
-  const [examCompleted, setExamCompleted] = useState(false);
+  const [testStarted, setTestStarted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState(null);
+  
+  // Results and validation
   const [showResult, setShowResult] = useState(false);
   const [result, setResult] = useState(null);
-  const [testStarted, setTestStarted] = useState(false);
-  const [showTestDetails, setShowTestDetails] = useState(true);
-  const [showAgreementDialog, setShowAgreementDialog] = useState(false);
+  const [codingTestResults, setCodingTestResults] = useState({});
+  const [codingValidationStatus, setCodingValidationStatus] = useState({});
+  const [allTestsRun, setAllTestsRun] = useState(false);
+  
+  // UI state
   const [showConfetti, setShowConfetti] = useState(false);
   const [showNameConfirmation, setShowNameConfirmation] = useState(false);
+  const [showCodingTestModal, setShowCodingTestModal] = useState(false);
+  const [currentCodingQuestion, setCurrentCodingQuestion] = useState(null);
+  
+  // Certificate state
   const [certificateName, setCertificateName] = useState("");
   const [isGeneratingCertificate, setIsGeneratingCertificate] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [score, setScore] = useState(0);
   const [certificateDownloaded, setCertificateDownloaded] = useState(false);
   
-  // Security states
+  // Security state
   const [securityViolations, setSecurityViolations] = useState(0);
   const [warningMessage, setWarningMessage] = useState("");
+  
+  // State organization moved to top of component
   
   // Validation functions
   const validateAnswers = () => {
@@ -72,16 +254,6 @@ const Certifications = () => {
   };
 
   const maxViolations = 3; // Maximum allowed violations before auto-submit
-
-  // Add missing state variables
-  const [selectedCategory, setSelectedCategory] = useState("");
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [codingTestResults, setCodingTestResults] = useState({});
-  const [codingValidationStatus, setCodingValidationStatus] = useState({});
-  const [showCodingTestModal, setShowCodingTestModal] = useState(false);
-  const [currentCodingQuestion, setCurrentCodingQuestion] = useState(null);
-  // Add a state to track if all tests have been checked
-  const [allTestsRun, setAllTestsRun] = useState(false);
 
   // Check if all tests are passing whenever codingValidationStatus changes
   useEffect(() => {
@@ -219,10 +391,6 @@ const Certifications = () => {
     }
   }, [examStarted]);
 
-  const handleAnswer = (index, answer) => {
-    setAnswers((prev) => ({ ...prev, [index]: answer }));
-  };
-
   // Updated fetchQuestions function to get mixed MCQ and coding questions
   const fetchQuestions = async (category) => {
     setLoading(true);
@@ -341,8 +509,8 @@ const Certifications = () => {
 
       console.log("Submission successful:", response.data);
       setResult(response.data);
-      setScore(response.data.score);
-
+      
+      // Remove certification answers from local storage
       localStorage.removeItem("certificationAnswers");
 
       if (document.fullscreenElement) {
@@ -391,19 +559,16 @@ const Certifications = () => {
     setShowNameConfirmation(true);
   };
 
-  // Handle direct certificate generation and download
-  const handleNameConfirmation = async () => {
-    if (!certificateName.trim()) {
-      alert("Please enter a valid name for your certificate");
+  // Handle direct certificate generation and download with test result data
+  const generateAndDownloadCertificate = async () => {
+    if (!result || !certificateName.trim()) {
+      alert("Please ensure your name is entered correctly");
       return;
     }
 
-    setShowNameConfirmation(false);
     setIsGeneratingCertificate(true);
 
     try {
-      console.log("Starting certificate generation...");
-      
       // Create PDF document in landscape orientation with proper settings
       const doc = new jsPDF({
         orientation: "landscape",
@@ -416,6 +581,145 @@ const Certifications = () => {
       const pageWidth = doc.internal.pageSize.width;
       const pageHeight = doc.internal.pageSize.height;
 
+      // Add elegant background pattern
+      const addBackground = () => {
+        // Add wavy lines pattern
+        doc.setDrawColor(245, 245, 245);
+        doc.setLineWidth(0.1);
+        for (let i = 0; i < pageHeight; i += 5) {
+          doc.line(0, i, pageWidth, i);
+        }
+
+        // Add golden border
+        doc.setDrawColor(176, 148, 108); // Golden color
+        doc.setLineWidth(2);
+        doc.rect(15, 15, pageWidth - 30, pageHeight - 30);
+
+        // Add corner decorations
+        const cornerSize = 20;
+        doc.setFillColor(176, 148, 108);
+        // Top left
+        doc.rect(15, 15, cornerSize, 2, 'F');
+        doc.rect(15, 15, 2, cornerSize, 'F');
+        // Top right
+        doc.rect(pageWidth - 15 - cornerSize, 15, cornerSize, 2, 'F');
+        doc.rect(pageWidth - 17, 15, 2, cornerSize, 'F');
+        // Bottom left
+        doc.rect(15, pageHeight - 17, cornerSize, 2, 'F');
+        doc.rect(15, pageHeight - 15 - cornerSize, 2, cornerSize, 'F');
+        // Bottom right
+        doc.rect(pageWidth - 15 - cornerSize, pageHeight - 17, cornerSize, 2, 'F');
+        doc.rect(pageWidth - 17, pageHeight - 15 - cornerSize, 2, cornerSize, 'F');
+      };
+      addBackground();
+
+      // Add logo/emblem
+      doc.setFillColor(176, 148, 108);
+      const logoSize = 20;
+      doc.rect(pageWidth/2 - logoSize/2, 30, logoSize, logoSize, 'F');
+
+      // Add certificate title
+      doc.setFont("times", "bold");
+      doc.setTextColor(50, 50, 50);
+      doc.setFontSize(40);
+      doc.text("CERTIFICATE OF COMPLETION", pageWidth/2, 70, { align: "center" });
+
+      // Add user name
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(36);
+      doc.text(certificateName, pageWidth/2, 110, { align: "center" });
+
+      // Add course details
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(16);
+      doc.setTextColor(80, 80, 80);
+      doc.text(
+        `Has successfully completed the ${selectedCategory} certification exam`,
+        pageWidth/2,
+        130,
+        { align: "center" }
+      );
+
+      // Add score and performance
+      const { score, totalQuestions, percentage, badgeType } = result;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(20);
+      doc.text(
+        `Score: ${score}/${totalQuestions} (${percentage}%)`,
+        pageWidth/2,
+        150,
+        { align: "center" }
+      );
+
+      // Add badge type with color
+      let badgeColor;
+      switch(badgeType.toLowerCase()) {
+        case 'platinum':
+          badgeColor = [90, 90, 90];
+          break;
+        case 'gold':
+          badgeColor = [212, 175, 55];
+          break;
+        case 'silver':
+          badgeColor = [192, 192, 192];
+          break;
+        default:
+          badgeColor = [176, 148, 108];
+      }
+      doc.setTextColor(badgeColor[0], badgeColor[1], badgeColor[2]);
+      doc.text(
+        badgeType.toUpperCase() + " BADGE ACHIEVED",
+        pageWidth/2,
+        170,
+        { align: "center" }
+      );
+
+      // Add date and certificate ID
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(12);
+      doc.setTextColor(80, 80, 80);
+      
+      const certIssueDate = new Date().toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+      });
+
+      // Add dividing lines for signature
+      doc.setDrawColor(176, 148, 108);
+      doc.setLineWidth(0.5);
+      doc.line(pageWidth/2 - 50, pageHeight - 40, pageWidth/2 + 50, pageHeight - 40);
+
+      // Add signature text
+      doc.text("AUTHORIZED SIGNATURE", pageWidth/2, pageHeight - 30, { align: "center" });
+
+      // Add date and certificate ID
+      doc.text(`Issue Date: ${issueDate}`, 30, pageHeight - 30);
+      doc.text(`Certificate ID: ${result.certificateId}`, pageWidth - 30, pageHeight - 30, { align: "right" });
+
+      // Create the file name
+      const fileName = `${selectedCategory}_Certificate_${certificateName.replace(/\s+/g, '_')}.pdf`;
+
+      // Create blob and trigger download
+      const pdfBlob = doc.output('blob');
+      const blobUrl = window.URL.createObjectURL(pdfBlob);
+
+      const downloadLink = document.createElement('a');
+      downloadLink.href = blobUrl;
+      downloadLink.download = fileName;
+      downloadLink.style.display = 'none';
+      
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      
+      // Cleanup
+      setTimeout(() => {
+        document.body.removeChild(downloadLink);
+        window.URL.revokeObjectURL(blobUrl);
+        setCertificateDownloaded(true);
+        setIsGeneratingCertificate(false);
+      }, 100);
+
       // Set background
       doc.setFillColor(245, 245, 255);
       doc.rect(0, 0, pageWidth, pageHeight, "F");
@@ -426,11 +730,11 @@ const Certifications = () => {
       doc.rect(10, 10, pageWidth - 20, pageHeight - 20);
 
       // Calculate percentage and set performance text
-      const percentage = (score / questions.length) * 100;
+      const certificatePercentage = (score / questions.length) * 100;
       let performanceText = "";
       let performanceColor = [];
 
-      if (percentage >= 90) {
+      if (certificatePercentage >= 90) {
         performanceText = "Outstanding Achievement";
         performanceColor = [0, 100, 0];
       } else if (percentage >= 80) {
@@ -901,20 +1205,33 @@ const Certifications = () => {
   };
 
   const resetTest = () => {
+    // Reset question-related state
     setSelectedCategory("");
     setQuestions([]);
     setCurrentQuestion(0);
     setAnswers({});
-    setShowResult(false);
-    setResult(null);
+    
+    // Reset exam state
     setTestStarted(false);
     setTimeRemaining(1800);
+    setExamStarted(false);
+    
+    // Reset results and validation
+    setShowResult(false);
+    setResult(null);
+    setCodingTestResults({});
+    setCodingValidationStatus({});
+    setAllTestsRun(false);
+    
+    // Reset UI state
     setShowConfetti(false);
     setShowNameConfirmation(false);
+    setShowCodingTestModal(false);
+    setCurrentCodingQuestion(null);
+    
+    // Reset certificate state
     setCertificateName("");
-    setCurrentPage(1);
-    setScore(0);
-    setExamStarted(false);
+    setIsGeneratingCertificate(false);
     setCertificateDownloaded(false);
   };
 
@@ -1021,31 +1338,42 @@ const Certifications = () => {
           </div>
           {result.passed && (
             <div className="mb-4 space-y-3">
-              <motion.button
-                onClick={() => {
-                  if (!certificateDownloaded) {
-                    setShowNameConfirmation(true);
-                  }
-                }}
+              <PDFDownloadLink
+                document={
+                  <CertificateDocument
+                    name={certificateName || localStorage.getItem("userName") || "Certificate Holder"}
+                    result={result}
+                    category={selectedCategory}
+                  />
+                }
+                fileName={`${selectedCategory}_Certificate_${(certificateName || "User").replace(/\s+/g, '_')}.pdf`}
                 className={`inline-block px-6 py-3 rounded-lg font-semibold transition ${
                   certificateDownloaded
                     ? 'bg-gray-600 cursor-not-allowed'
                     : 'bg-purple-600 hover:bg-purple-700'
                 } text-white relative overflow-hidden`}
-                whileHover={{ scale: certificateDownloaded ? 1 : 1.05 }}
-                disabled={isGeneratingCertificate || certificateDownloaded}
+                style={{
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem'
+                }}
               >
-                {isGeneratingCertificate && (
-                  <div className="absolute inset-0 bg-purple-600 flex items-center justify-center">
-                    <div className="w-6 h-6 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
-                  </div>
+                {({ loading }) => (
+                  loading ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Preparing Certificate...</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <FaDownload className="w-5 h-5" />
+                      <span>Download Your Certificate</span>
+                    </div>
+                  )
                 )}
-                {isGeneratingCertificate
-                  ? "Generating Certificate..."
-                  : certificateDownloaded
-                  ? "Certificate Downloaded ✓"
-                  : "Generate & Download Certificate"}
-              </motion.button>
+              </PDFDownloadLink>
               {certificateDownloaded && (
                 <div className="mt-2">
                   <p className="text-sm text-gray-400">
@@ -1440,32 +1768,45 @@ const Certifications = () => {
         {/* Name Confirmation Dialog */}
         {showNameConfirmation && (
           <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-75">
-            <div className="bg-gray-800 p-6 rounded-lg shadow-lg max-w-md w-full">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-gray-800 p-6 rounded-lg shadow-lg max-w-md w-full"
+            >
               <h3 className="text-xl font-bold text-white mb-4">
                 Confirm Your Name for Certificate
               </h3>
+              <p className="text-gray-400 text-sm mb-4">
+                Please enter your full name as you want it to appear on the certificate.
+                This cannot be changed after the certificate is generated.
+              </p>
               <input
                 type="text"
                 value={certificateName}
                 onChange={(e) => setCertificateName(e.target.value)}
-                className="w-full p-3 bg-gray-700 text-white rounded-md mb-4"
+                className="w-full p-3 bg-gray-700 text-white rounded-md mb-4 border border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
                 placeholder="Enter your full name"
+                autoFocus
               />
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={() => setShowNameConfirmation(false)}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                  className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={handleNameConfirmation}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  onClick={generateAndDownloadCertificate}
+                  disabled={!certificateName.trim()}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-800 disabled:cursor-not-allowed flex items-center space-x-2"
                 >
-                  Generate Certificate
+                  <span>Generate Certificate</span>
+                  {isGeneratingCertificate && (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  )}
                 </button>
               </div>
-            </div>
+            </motion.div>
           </div>
         )}
       </div>

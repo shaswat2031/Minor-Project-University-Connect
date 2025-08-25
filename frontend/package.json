@@ -12,9 +12,11 @@
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@monaco-editor/react": "^4.7.0",
+    "@react-pdf/renderer": "^4.3.0",
     "@tailwindcss/vite": "^4.0.6",
     "axios": "^1.11.0",
     "codejar": "^4.2.0",
+    "date-fns": "^4.1.0",
     "face-api.js": "^0.22.2",
     "framer-motion": "^12.23.12",
     "gsap": "^3.13.0",
