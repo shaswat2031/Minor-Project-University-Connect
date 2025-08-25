@@ -2,8 +2,12 @@ import axios from 'axios';
 
 // Set base URL for API requests
 const BASE_URL = import.meta.env.VITE_API_URL || 'https://minor-project-university-connect.onrender.com';
-// Try using an alternative path that might not be blocked by browser extensions
-const API_URL = `${BASE_URL}/api/learning-path`;
+// Try using paths that might not be blocked by browser extensions
+const API_PATHS = [
+    `${BASE_URL}/api/learning-path`,
+    `${BASE_URL}/api/ai-roadmap`,
+    `${BASE_URL}/api/roadmap/gemini`
+];
 
 // Configure axios defaults
 axios.defaults.baseURL = BASE_URL;
@@ -23,19 +27,43 @@ axios.interceptors.request.use((config) => {
 });
 
 export const generateRoadmap = async (formData) => {
-    try {
-        const response = await axios.post(`${API_URL}/generate`, formData);
-        return response.data;
-    } catch (error) {
-        throw error.response?.data || error.message;
+    let lastError = null;
+    
+    // Try each API path in sequence until one works
+    for (const apiPath of API_PATHS) {
+        try {
+            console.log(`Trying to generate roadmap with API path: ${apiPath}`);
+            const response = await axios.post(`${apiPath}/generate`, formData);
+            console.log(`Successfully generated roadmap with API path: ${apiPath}`);
+            return response.data;
+        } catch (error) {
+            console.error(`Error with API path ${apiPath}:`, error.message);
+            lastError = error.response?.data || error.message;
+            // Continue to the next API path
+        }
     }
+    
+    // If we get here, all paths failed
+    throw lastError || new Error('Failed to generate roadmap with all available API paths');
 };
 
 export const getRoadmap = async () => {
-    try {
-        const response = await axios.get(`${API_URL}/get`);
-        return response.data;
-    } catch (error) {
-        throw error.response?.data || error.message;
+    let lastError = null;
+    
+    // Try each API path in sequence until one works
+    for (const apiPath of API_PATHS) {
+        try {
+            console.log(`Trying to get roadmap with API path: ${apiPath}`);
+            const response = await axios.get(`${apiPath}/get`);
+            console.log(`Successfully retrieved roadmap with API path: ${apiPath}`);
+            return response.data;
+        } catch (error) {
+            console.error(`Error with API path ${apiPath}:`, error.message);
+            lastError = error.response?.data || error.message;
+            // Continue to the next API path
+        }
     }
+    
+    // If we get here, all paths failed
+    throw lastError || new Error('Failed to retrieve roadmap with all available API paths');
 };

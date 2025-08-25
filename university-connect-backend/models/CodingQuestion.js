@@ -38,7 +38,19 @@ const CodingQuestionSchema = new mongoose.Schema(
     language: {
       type: String,
       required: true,
-      enum: ["JavaScript", "Python", "Java", "C++", "C"],
+      enum: ["JavaScript", "Python", "Java"],
+    },
+    score: {
+      type: Number,
+      default: 0,
+    },
+    totalTestCases: {
+      type: Number,
+      default: 0,
+    },
+    passedTestCases: {
+      type: Number,
+      default: 0,
     },
     starterCode: {
       type: String,

@@ -32,7 +32,8 @@ const adminRoutes = require("./routes/adminRoutes");
 const aiRoadmapRoutes = require('./routes/aiRoadmapRoutes');
 const checkAuthRoutes = require('./routes/check-auth');
 const testRoutes = require('./routes/test-routes');
-const codingExecutionRoutes = require('./routes/codingExecutionRoutes');
+// Code execution routes
+const codeExecutionRoutes = require('./routes/codeExecutionRoutes');
 
 // Enhanced MongoDB connection function
 const connectDB = async () => {
@@ -126,9 +127,10 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/roadmap/gemini', aiRoadmapRoutes);
 app.use('/api/learning-path', aiRoadmapRoutes); // Alternative path that might not be blocked
+app.use('/api/ai-roadmap', aiRoadmapRoutes); // Clearer path for AI roadmap generation
 app.use('/api/check-auth', checkAuthRoutes); // Add auth checking route
 app.use('/api/test', testRoutes); // Add test routes for debugging
-app.use('/api/certifications/coding', codingExecutionRoutes); // Add coding execution routes
+app.use('/api/code', codeExecutionRoutes); // Code execution and judging routes
 
 console.log('✅ All routes mounted successfully');
 

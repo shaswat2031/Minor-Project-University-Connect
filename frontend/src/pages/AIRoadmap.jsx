@@ -28,11 +28,40 @@ const DayNode = ({ data }) => {
                     <p className="text-xs text-gray-600 dark:text-gray-400">{data.content}</p>
                 </div>
             )}
+
+            {data.exercises && data.exercises.length > 0 && (
+                <div className="mb-3">
+                    <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1 flex items-center">
+                        Exercises
+                    </h4>
+                    <ul className="text-xs space-y-1">
+                        {Array.isArray(data.exercises) ? (
+                            data.exercises.slice(0, 2).map((exercise, index) => (
+                                <li key={index} className="truncate">
+                                    {typeof exercise === 'object' ? (
+                                        exercise.title
+                                    ) : (
+                                        exercise
+                                    )}
+                                </li>
+                            ))
+                        ) : (
+                            <li>Practice exercises included</li>
+                        )}
+                        {data.exercises.length > 2 && <li>...</li>}
+                    </ul>
+                </div>
+            )}
             
             {data.estimatedHours && (
                 <div className="mb-3 flex items-center text-sm text-gray-700 dark:text-gray-300">
                     <FiClock className="mr-1" /> 
                     <span>Estimated time: <span className="font-medium">{data.estimatedHours} hours</span></span>
+                    {data.weekEstimate && (
+                        <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">
+                            ({data.weekEstimate})
+                        </span>
+                    )}
                 </div>
             )}
             
@@ -46,14 +75,21 @@ const DayNode = ({ data }) => {
                             data.resources.map((resource, index) => (
                                 <li key={index} className="truncate">
                                     {typeof resource === 'object' ? (
-                                        <a 
-                                            href={resource.url} 
-                                            target="_blank" 
-                                            rel="noopener noreferrer"
-                                            className="text-blue-600 dark:text-blue-400 hover:underline"
-                                        >
-                                            {resource.title}
-                                        </a>
+                                        <div>
+                                            <a 
+                                                href={resource.url} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                className="text-blue-600 dark:text-blue-400 hover:underline"
+                                            >
+                                                {resource.title}
+                                            </a>
+                                            {resource.type && (
+                                                <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">
+                                                    ({resource.type})
+                                                </span>
+                                            )}
+                                        </div>
                                     ) : (
                                         <a 
                                             href={resource} 
@@ -139,6 +175,7 @@ DayNode.propTypes = {
         description: PropTypes.string,
         content: PropTypes.string,
         estimatedHours: PropTypes.number,
+        weekEstimate: PropTypes.string,
         resources: PropTypes.oneOfType([
             PropTypes.string,
             PropTypes.arrayOf(
@@ -147,13 +184,23 @@ DayNode.propTypes = {
                     PropTypes.shape({
                         title: PropTypes.string,
                         url: PropTypes.string,
-                        type: PropTypes.string
+                        type: PropTypes.string,
+                        description: PropTypes.string
                     })
                 ])
             )
         ]),
         difficulty: PropTypes.string,
-        exercises: PropTypes.arrayOf(PropTypes.string)
+        exercises: PropTypes.arrayOf(
+            PropTypes.oneOfType([
+                PropTypes.string,
+                PropTypes.shape({
+                    title: PropTypes.string,
+                    description: PropTypes.string,
+                    link: PropTypes.string
+                })
+            ])
+        )
     }).isRequired
 };
 
@@ -514,9 +561,29 @@ const AIRoadmap = () => {
                                         {currentDay.data.exercises && currentDay.data.exercises.length > 0 && (
                                             <div>
                                                 <h3 className="font-medium" style={{ color: themeStyles.secondary }}>Exercises:</h3>
-                                                <ul className="list-disc pl-5 mt-1 space-y-1">
+                                                <ul className="list-disc pl-5 mt-1 space-y-3">
                                                     {currentDay.data.exercises.map((exercise, index) => (
-                                                        <li key={index}>{exercise}</li>
+                                                        <li key={index}>
+                                                            {typeof exercise === 'object' ? (
+                                                                <div className="mb-2">
+                                                                    <div className="font-medium">{exercise.title}</div>
+                                                                    <div className="mt-1 text-sm">{exercise.description}</div>
+                                                                    {exercise.link && (
+                                                                        <a 
+                                                                            href={exercise.link}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className="mt-1 inline-block text-sm"
+                                                                            style={{ color: themeStyles.primary }}
+                                                                        >
+                                                                            Go to exercise →
+                                                                        </a>
+                                                                    )}
+                                                                </div>
+                                                            ) : (
+                                                                exercise
+                                                            )}
+                                                        </li>
                                                     ))}
                                                 </ul>
                                             </div>
@@ -545,6 +612,11 @@ const AIRoadmap = () => {
                                                                         {resource.type && (
                                                                             <div className="text-xs mt-1 uppercase tracking-wide">
                                                                                 {resource.type}
+                                                                            </div>
+                                                                        )}
+                                                                        {resource.description && (
+                                                                            <div className="text-sm mt-1 text-gray-600 dark:text-gray-400">
+                                                                                {resource.description}
                                                                             </div>
                                                                         )}
                                                                     </>

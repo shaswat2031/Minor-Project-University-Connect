@@ -12,8 +12,6 @@ import {
   FaExclamationTriangle,
 } from "react-icons/fa";
 import {
-  fetchCertificationQuestions,
-  submitCertificationAnswers,
   fetchUserProfile,
 } from "../api/certification";
 import { executeCodingTest, runAllTestCases } from "../api/codingService";
@@ -48,7 +46,6 @@ const Certifications = () => {
   // Add missing state variables
   const [selectedCategory, setSelectedCategory] = useState("");
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(1800);
   const [codingTestResults, setCodingTestResults] = useState({});
   const [codingValidationStatus, setCodingValidationStatus] = useState({});
   const [showCodingTestModal, setShowCodingTestModal] = useState(false);

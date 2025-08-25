@@ -1,0 +1,108 @@
+const express = require('express');
+const router = express.Router();
+const authMiddleware = require('../middleware/authMiddleware');
+const aiRoadmapController = require('./aiRoadmapController.js.new');
+
+// ✅ Generate roadmap (fixed version)
+router.post('/generate', authMiddleware, (req, res) => {
+    console.log('📌 Processing roadmap generation request (fixed controller):', req.body);
+    console.log('🔐 Auth user in request:', req.user ? `ID: ${req.user._id}` : 'No user found');
+    
+    // Validate and process user input
+    const { goals, currentLevel, interests, timeCommitment } = req.body;
+    
+    if (!goals) {
+        return res.status(400).json({
+            success: false,
+            message: 'Please provide your learning goals'
+        });
+    }
+    
+    // Convert string interests to array if needed
+    if (interests && !Array.isArray(interests)) {
+        req.body.interests = interests.split(',').map(item => item.trim());
+    }
+    
+    aiRoadmapController.generateRoadmap(req, res);
+});
+
+// ✅ Get roadmap
+router.get('/get', authMiddleware, (req, res) => {
+    console.log('📌 Processing roadmap retrieval request');
+    aiRoadmapController.getRoadmap(req, res);
+});
+
+// ✅ Test Perplexity API directly with fixed prompt construction
+router.post('/test-perplexity-fixed', authMiddleware, async (req, res) => {
+    try {
+        // Extract subject and ensure it's clean
+        let mainSubject = req.body.subject || "Programming";
+        
+        // Clean the subject (similar to our controller logic)
+        mainSubject = mainSubject
+            .replace(/[^\w\s]/gi, '')
+            .trim();
+            
+        if (!mainSubject || mainSubject.length < 2) {
+            mainSubject = "Programming";
+        }
+        
+        // Capitalize first letter
+        mainSubject = mainSubject.charAt(0).toUpperCase() + mainSubject.slice(1).toLowerCase();
+        
+        console.log('📌 Testing Perplexity API with FIXED prompt construction');
+        console.log('📌 Subject to use in prompt:', mainSubject);
+        
+        // Build a simple test prompt
+        const testPrompt = `Create a learning roadmap for ${mainSubject}. 
+This is a test of the fixed prompt system that properly uses ${mainSubject} as the subject.
+Please confirm in your response that you received a request about ${mainSubject} specifically.`;
+        
+        const url = 'https://api.perplexity.ai/chat/completions';
+        const options = {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: 'sonar',
+                messages: [
+                    { role: 'system', content: 'Be precise and concise.' },
+                    { role: 'user', content: testPrompt }
+                ]
+            })
+        };
+
+        console.log('📝 Full test prompt:', testPrompt);
+        console.log('🚀 Sending request to Perplexity API');
+
+        const response = await fetch(url, options);
+        const data = await response.json();
+        
+        res.json({
+            success: true,
+            mainSubject: mainSubject,
+            testPrompt: testPrompt,
+            response: data,
+            userId: req.user._id
+        });
+    } catch (error) {
+        console.error('❌ Fixed Perplexity API Test Error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ✅ Central error handler
+router.use((error, req, res, next) => {
+    console.error('❌ AI Roadmap Route Error:', error);
+    res.status(500).json({
+        message: 'Error processing roadmap request',
+        error: error.message
+    });
+});
+
+module.exports = router;
