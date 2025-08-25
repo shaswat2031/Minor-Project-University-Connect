@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { FaExclamationTriangle, FaEye, FaWindowClose } from "react-icons/fa";
 import axios from "axios";
 import {
   FaCertificate,
@@ -9,7 +10,6 @@ import {
   FaStop,
   FaQuestionCircle,
   FaCheck,
-  FaExclamationTriangle,
 } from "react-icons/fa";
 import {
   fetchUserProfile,
@@ -18,6 +18,8 @@ import { executeCodingTest, runAllTestCases } from "../api/codingService";
 import jsPDF from "jspdf";
 import Confetti from "react-confetti";
 import CodeEditor from "../components/CodeEditor"; // Import our custom CodeEditor component
+
+import ExamSecurity from '../components/ExamSecurity';
 
 const Certifications = () => {
   const [activeTab, setActiveTab] = useState("available");
@@ -36,12 +38,40 @@ const Certifications = () => {
   const [testStarted, setTestStarted] = useState(false);
   const [showTestDetails, setShowTestDetails] = useState(true);
   const [showAgreementDialog, setShowAgreementDialog] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false); // State to control confetti
-  const [showNameConfirmation, setShowNameConfirmation] = useState(false); // New state for name confirmation
-  const [certificateName, setCertificateName] = useState(""); // New state for certificate name
-  const [isGeneratingCertificate, setIsGeneratingCertificate] = useState(false); // State for certificate generation
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [showNameConfirmation, setShowNameConfirmation] = useState(false);
+  const [certificateName, setCertificateName] = useState("");
+  const [isGeneratingCertificate, setIsGeneratingCertificate] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [score, setScore] = useState(0);
+  const [certificateDownloaded, setCertificateDownloaded] = useState(false);
+  
+  // Security states
+  const [securityViolations, setSecurityViolations] = useState(0);
+  const [warningMessage, setWarningMessage] = useState("");
+  
+  // Validation functions
+  const validateAnswers = () => {
+    const unansweredMCQ = questions.some((q, index) => 
+      q.type === 'mcq' && (!answers[index] || answers[index].trim() === '')
+    );
+    
+    const unvalidatedCoding = questions.some((q, index) => 
+      q.type === 'coding' && !codingValidationStatus[index]
+    );
+
+    if (unansweredMCQ) {
+      return { valid: false, message: 'Please answer all multiple choice questions' };
+    }
+    
+    if (unvalidatedCoding) {
+      return { valid: false, message: 'Please run and pass all coding test cases' };
+    }
+
+    return { valid: true };
+  };
+
+  const maxViolations = 3; // Maximum allowed violations before auto-submit
 
   // Add missing state variables
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -65,6 +95,25 @@ const Certifications = () => {
       setAllTestsRun(allCodingValidated || codingQuestions.length === 0);
     }
   }, [questions, codingValidationStatus]);
+
+  // Security handlers
+  const handleSecurityViolation = (reason) => {
+    setSecurityViolations(prev => {
+      const newViolations = prev + 1;
+      setWarningMessage(`Security Violation: ${reason}. Warning ${newViolations}/${maxViolations}`);
+      
+      if (newViolations >= maxViolations) {
+        handleSubmit(); // Auto-submit after max violations
+      }
+      return newViolations;
+    });
+  };
+
+  const handleSecurityWarning = (message) => {
+    setWarningMessage(message);
+    // Clear warning after 5 seconds
+    setTimeout(() => setWarningMessage(""), 5000);
+  };
 
   const categories = [
     {
@@ -231,57 +280,37 @@ const Certifications = () => {
 
   const handleSubmit = async () => {
     try {
-      console.log("Starting submission...");
+      // First validate all answers
+      const validation = validateAnswers();
+      if (!validation.valid) {
+        alert(validation.message);
+        return;
+      }
 
+      // Get and validate authentication
       const token = localStorage.getItem("token");
       if (!token) {
         window.location.href = "/login";
         return;
       }
 
-      // Get user ID from token payload instead of localStorage
+      // Extract user info from token
       let userId, userName;
-
       try {
         const tokenPayload = JSON.parse(atob(token.split(".")[1]));
         userId = tokenPayload.id;
-        console.log("User ID from token:", userId);
-
-        // Get user name from localStorage or profile
+        
+        // Get or fetch user name
         userName = localStorage.getItem("userName");
-
         if (!userName) {
           const userProfile = await fetchUserProfile(token);
           userName = userProfile.name || "User";
           localStorage.setItem("userName", userName);
         }
-      } catch (tokenError) {
-        console.error("Error decoding token:", tokenError);
-        // Fallback to localStorage values
-        userId = localStorage.getItem("userId");
-        userName = localStorage.getItem("userName") || "User";
-      }
-
-      if (!userId) {
-        alert("User authentication error. Please login again.");
+      } catch (error) {
+        console.error("Authentication error:", error);
+        alert("Session expired. Please login again.");
         window.location.href = "/login";
-        return;
-      }
-
-      // Check if all coding questions have passed their test cases
-      const codingQuestions = questions.filter(q => q.type === "coding");
-      const unvalidatedCodingQuestions = codingQuestions.filter((_, index) => {
-        const questionIndex = questions.findIndex(q => q._id === questions[index]._id);
-        return !codingValidationStatus[questionIndex];
-      });
-
-      if (unvalidatedCodingQuestions.length > 0) {
-        alert("Please run and pass all test cases for coding questions before submitting!");
-        return;
-      }
-
-      if (Object.keys(answers).length < questions.length) {
-        alert("Please answer all questions before submitting!");
         return;
       }
 
@@ -362,14 +391,157 @@ const Certifications = () => {
     setShowNameConfirmation(true);
   };
 
-  // New function to handle name confirmation
-  const handleNameConfirmation = () => {
+  // Handle direct certificate generation and download
+  const handleNameConfirmation = async () => {
     if (!certificateName.trim()) {
       alert("Please enter a valid name for your certificate");
       return;
     }
+
     setShowNameConfirmation(false);
-    generateCertificate(certificateName, score, questions.length);
+    setIsGeneratingCertificate(true);
+
+    try {
+      console.log("Starting certificate generation...");
+      
+      // Create PDF document in landscape orientation with proper settings
+      const doc = new jsPDF({
+        orientation: "landscape",
+        unit: "mm",
+        format: "a4",
+        putOnlyUsedFonts: true,
+        compress: true
+      });
+
+      const pageWidth = doc.internal.pageSize.width;
+      const pageHeight = doc.internal.pageSize.height;
+
+      // Set background
+      doc.setFillColor(245, 245, 255);
+      doc.rect(0, 0, pageWidth, pageHeight, "F");
+
+      // Add border
+      doc.setDrawColor(65, 105, 225);
+      doc.setLineWidth(1);
+      doc.rect(10, 10, pageWidth - 20, pageHeight - 20);
+
+      // Calculate percentage and set performance text
+      const percentage = (score / questions.length) * 100;
+      let performanceText = "";
+      let performanceColor = [];
+
+      if (percentage >= 90) {
+        performanceText = "Outstanding Achievement";
+        performanceColor = [0, 100, 0];
+      } else if (percentage >= 80) {
+        performanceText = "Excellent Performance";
+        performanceColor = [0, 128, 0];
+      } else if (percentage >= 70) {
+        performanceText = "Very Good";
+        performanceColor = [46, 139, 87];
+      } else {
+        performanceText = "Passed Successfully";
+        performanceColor = [70, 130, 180];
+      }
+
+      // Add certificate title
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(40);
+      doc.setTextColor(25, 25, 112);
+      doc.text("Certificate of Achievement", pageWidth / 2, 40, { align: "center" });
+
+      // Add main text
+      doc.setFontSize(20);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(70, 70, 70);
+      doc.text("This is to certify that", pageWidth / 2, 70, { align: "center" });
+
+      // Add name
+      doc.setFontSize(30);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(25, 25, 112);
+      doc.text(certificateName, pageWidth / 2, 90, { align: "center" });
+
+      // Add course completion text
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(70, 70, 70);
+      doc.text(
+        `has successfully completed the ${selectedCategory} certification exam`,
+        pageWidth / 2,
+        110,
+        { align: "center" }
+      );
+
+      // Add score
+      doc.setFontSize(20);
+      doc.setTextColor(performanceColor[0], performanceColor[1], performanceColor[2]);
+      doc.text(
+        `Score: ${score}/${questions.length} (${percentage.toFixed(1)}%)`,
+        pageWidth / 2,
+        130,
+        { align: "center" }
+      );
+      doc.text(`${performanceText}`, pageWidth / 2, 140, { align: "center" });
+
+      // Generate unique identifiers
+      const timestamp = new Date().toISOString().replace(/[-:.]/g, '');
+      const certificateId = `UC-${Math.floor(100000 + Math.random() * 900000)}-${new Date().getFullYear()}`;
+      const issueDate = new Date().toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+      });
+
+      // Add certificate details to PDF
+      doc.setFontSize(12);
+      doc.setTextColor(70, 70, 70);
+      doc.text(`Issue Date: ${issueDate}`, 20, pageHeight - 20);
+      doc.text(`Certificate ID: ${certificateId}`, pageWidth - 20, pageHeight - 20, { align: "right" });
+      
+      try {
+        // Create file name with timestamp to ensure uniqueness
+        const timestamp = new Date().toISOString().replace(/[-:.]/g, '');
+        const fileName = `${selectedCategory}_Certificate_${certificateName.replace(/\s+/g, '_')}_${timestamp}.pdf`;
+
+        // Create blob from PDF
+        const pdfBlob = doc.output('blob');
+        
+        // Create object URL for the blob
+        const blobUrl = window.URL.createObjectURL(pdfBlob);
+
+        // Create download link
+        const downloadLink = document.createElement('a');
+        downloadLink.href = blobUrl;
+        downloadLink.download = fileName;
+        downloadLink.style.display = 'none';
+        
+        // Trigger download
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        
+        // Cleanup
+        setTimeout(() => {
+          document.body.removeChild(downloadLink);
+          window.URL.revokeObjectURL(blobUrl);
+        }, 100);
+
+        // Mark as downloaded in local storage
+        setCertificateDownloaded(true);
+        localStorage.setItem(`certificate_${certificateId}`, 'true');
+
+        console.log("Certificate generated and download triggered successfully");
+      } catch (error) {
+        console.error("Error in certificate download:", error);
+        throw new Error("Failed to trigger certificate download");
+      }
+
+    } catch (error) {
+      console.error("Error generating certificate:", error);
+      alert("Failed to generate certificate. Please try again.");
+    } finally {
+      setIsGeneratingCertificate(false);
+    }
   };
 
   // Simplified certificate generation with fewer decorative elements
@@ -491,25 +663,51 @@ const Certifications = () => {
     }
   };
 
-  const startTest = () => {
-    setShowAgreementDialog(true);
+  const startTest = async () => {
+    try {
+      // Request camera permission first
+      await navigator.mediaDevices.getUserMedia({ video: true });
+      setShowAgreementDialog(true);
+    } catch (error) {
+      console.error('Camera access denied:', error);
+      setWarningMessage('Camera access is required to take the test. Please allow camera access and try again.');
+    }
   };
 
-  const agreeToStartTest = () => {
-    setShowAgreementDialog(false);
-    setShowTestDetails(false);
-    setTestStarted(true);
+  const agreeToStartTest = async () => {
+    try {
+      setShowAgreementDialog(false);
+      setShowTestDetails(false);
+      setTestStarted(true);
 
-    // Enter full-screen mode
-    document.documentElement.requestFullscreen().catch((err) => {
-      console.error("Failed to enter fullscreen mode:", err);
-    });
+      // Enter full-screen mode
+      await document.documentElement.requestFullscreen();
+      
+      // Reset security states
+      setSecurityViolations(0);
+      setWarningMessage('');
+      setLastActiveTime(Date.now());
 
-    // Disable copy-paste
-    document.addEventListener("copy", (e) => e.preventDefault());
-    document.addEventListener("cut", (e) => e.preventDefault());
-    document.addEventListener("paste", (e) => e.preventDefault());
-    document.addEventListener("contextmenu", (e) => e.preventDefault());
+      // Add all security event listeners
+      const preventDefaultBehavior = (e) => {
+        e.preventDefault();
+        handleSecurityWarning('This action is not allowed during the test');
+      };
+
+      document.addEventListener("copy", preventDefaultBehavior);
+      document.addEventListener("cut", preventDefaultBehavior);
+      document.addEventListener("paste", preventDefaultBehavior);
+      document.addEventListener("contextmenu", preventDefaultBehavior);
+      
+      window.onblur = () => {
+        handleSecurityViolation('Window focus lost - possible tab switch');
+      };
+
+    } catch (error) {
+      console.error('Error starting test:', error);
+      setWarningMessage('Failed to start test in secure mode. Please refresh and try again.');
+      setTestStarted(false);
+    }
   };
 
   const formatTime = (seconds) => {
@@ -717,6 +915,7 @@ const Certifications = () => {
     setCurrentPage(1);
     setScore(0);
     setExamStarted(false);
+    setCertificateDownloaded(false);
   };
 
   // Category selection screen
@@ -822,29 +1021,41 @@ const Certifications = () => {
           </div>
           {result.passed && (
             <div className="mb-4 space-y-3">
-              {result.certificateUrl && (
-                <motion.a
-                  href={`${import.meta.env.VITE_API_URL}${
-                    result.certificateUrl
-                  }`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition mr-3"
-                  whileHover={{ scale: 1.05 }}
-                >
-                  Download Server Certificate
-                </motion.a>
-              )}
               <motion.button
-                onClick={openNameConfirmationDialog}
-                className="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition"
-                whileHover={{ scale: 1.05 }}
-                disabled={isGeneratingCertificate}
+                onClick={() => {
+                  if (!certificateDownloaded) {
+                    setShowNameConfirmation(true);
+                  }
+                }}
+                className={`inline-block px-6 py-3 rounded-lg font-semibold transition ${
+                  certificateDownloaded
+                    ? 'bg-gray-600 cursor-not-allowed'
+                    : 'bg-purple-600 hover:bg-purple-700'
+                } text-white relative overflow-hidden`}
+                whileHover={{ scale: certificateDownloaded ? 1 : 1.05 }}
+                disabled={isGeneratingCertificate || certificateDownloaded}
               >
+                {isGeneratingCertificate && (
+                  <div className="absolute inset-0 bg-purple-600 flex items-center justify-center">
+                    <div className="w-6 h-6 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                )}
                 {isGeneratingCertificate
-                  ? "Generating..."
-                  : "Generate Custom Certificate"}
+                  ? "Generating Certificate..."
+                  : certificateDownloaded
+                  ? "Certificate Downloaded ✓"
+                  : "Generate & Download Certificate"}
               </motion.button>
+              {certificateDownloaded && (
+                <div className="mt-2">
+                  <p className="text-sm text-gray-400">
+                    Your certificate has been downloaded successfully. Check your downloads folder.
+                  </p>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Note: For security reasons, each certificate can only be downloaded once.
+                  </p>
+                </div>
+              )}
             </div>
           )}
           <div className="flex gap-4 justify-center">
@@ -912,6 +1123,22 @@ const Certifications = () => {
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 p-6">
+        <ExamSecurity 
+          onViolation={handleSecurityViolation}
+        />
+        {warningMessage && (
+          <div className="fixed top-4 right-4 max-w-md bg-red-800 text-white p-4 rounded-lg shadow-lg z-50">
+            <div className="flex items-center">
+              <FaExclamationTriangle className="text-yellow-400 mr-2" />
+              {warningMessage}
+            </div>
+            {securityViolations > 0 && (
+              <div className="text-sm mt-2 text-red-300">
+                Violations: {securityViolations}/{maxViolations}
+              </div>
+            )}
+          </div>
+        )}
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="bg-gray-800 rounded-xl p-6 mb-6 border border-gray-700">
