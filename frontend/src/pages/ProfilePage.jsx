@@ -104,6 +104,9 @@ const ProfilePage = () => {
               projects: [],
               socialLinks: {},
             });
+            
+            // Still try to fetch certifications
+            await fetchUserCertifications(id);
           } else {
             setError("Profile not found");
           }
@@ -118,6 +121,15 @@ const ProfilePage = () => {
     const fetchUserCertifications = async (userId) => {
       setCertificationsLoading(true);
       try {
+        // First try to get certifications from the profile
+        if (profile && profile.certifications && profile.certifications.length > 0) {
+          console.log("Using certifications from profile:", profile.certifications);
+          setCertifications(profile.certifications);
+          setCertificationsLoading(false);
+          return;
+        }
+        
+        // If not available in profile, fetch them directly
         const response = await axios.get(
           `${import.meta.env.VITE_API_URL}/api/certifications/user/${userId}`,
           {
