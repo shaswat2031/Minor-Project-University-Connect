@@ -63,8 +63,6 @@ const App = () => {
               path="/register"
               element={isAuthenticated ? <Navigate to="/" /> : <Register />}
             />
-              {/* Catch-all route for 404 */}
-              <Route path="*" element={<NotFound />} />
             {/* Protected user routes */}
             <Route
               path="/my-profile"
@@ -143,6 +141,8 @@ const App = () => {
                 </AdminProtectedRoute>
               }
             />
+            {/* Catch-all route for 404 - Must be last */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
           <Footer />
 

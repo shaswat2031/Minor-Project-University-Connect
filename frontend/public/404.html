@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Page Not Found - University Connect</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #0f2350 0%, #1a202c 50%, #000 100%);
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .container {
+      text-align: center;
+      background-color: rgba(26, 32, 44, 0.8);
+      padding: 2rem;
+      border-radius: 0.5rem;
+      border: 1px solid rgba(66, 153, 225, 0.3);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      max-width: 500px;
+      width: 90%;
+    }
+    
+    h1 {
+      color: #f56565;
+      font-size: 2.25rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .error-details {
+      background-color: rgba(0, 0, 0, 0.3);
+      padding: 1rem;
+      border-radius: 0.375rem;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      border: 1px solid rgba(45, 55, 72, 0.8);
+    }
+    
+    .error-details p {
+      margin: 0.5rem 0;
+      color: #cbd5e0;
+    }
+    
+    .error-details span {
+      color: #718096;
+    }
+    
+    .message {
+      color: #a0aec0;
+      margin-bottom: 1.5rem;
+    }
+    
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background-color: #2d3748;
+      border-radius: 9999px;
+      overflow: hidden;
+      position: relative;
+      margin-bottom: 1rem;
+    }
+    
+    .progress {
+      position: absolute;
+      height: 100%;
+      background-color: #4299e1;
+      animation: progress 3s linear forwards;
+    }
+    
+    .redirect-msg {
+      color: #4299e1;
+      font-size: 0.875rem;
+    }
+    
+    @keyframes progress {
+      0% { width: 0% }
+      100% { width: 100% }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>404: NOT_FOUND</h1>
+    
+    <div class="error-details">
+      <p><span>Code:</span> NOT_FOUND</p>
+      <p><span>ID:</span> bom1::9sprb-1756318510583-ab297b477533</p>
+    </div>
+    
+    <p class="message">The page you're looking for doesn't exist or you don't have permission to view it.</p>
+    
+    <div class="progress-bar">
+      <div class="progress"></div>
+    </div>
+    
+    <p class="redirect-msg">Redirecting to home page...</p>
+  </div>
+
+  <script>
+    // Redirect after 3 seconds
+    setTimeout(function() {
+      window.location.href = 'https://uniconnect.prasadshaswat.tech/';
+    }, 3000);
+  </script>
+</body>
+</html>
