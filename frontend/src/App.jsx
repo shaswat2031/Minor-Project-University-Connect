@@ -27,6 +27,7 @@ import ChatButton from "./components/Chat/ChatButton";
 import AdminPanel from "./pages/AdminPanel";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
 import AIRoadmap from "./pages/AIRoadmap";
+import NotFound from "./pages/NotFound";
 import { ToastProvider } from "./components/Toast";
 
 const App = () => {
@@ -62,6 +63,8 @@ const App = () => {
               path="/register"
               element={isAuthenticated ? <Navigate to="/" /> : <Register />}
             />
+              {/* Catch-all route for 404 */}
+              <Route path="*" element={<NotFound />} />
             {/* Protected user routes */}
             <Route
               path="/my-profile"
