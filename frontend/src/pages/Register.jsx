@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import { gsap } from "gsap";
 import Particles from "react-tsparticles";
@@ -330,9 +330,12 @@ const Register = () => {
       transition={{ delay: 1, duration: 0.4 }}
     >
       Already have an account?{" "}
-      <a href="/login" className="text-[#00fffc] hover:underline transition-colors duration-300">
-        Login
-      </a>
+      <Link
+                        to="/login"
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                      >
+                        Login
+                      </Link>
     </motion.p>
   </motion.div>
 </div>

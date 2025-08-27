@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import React from "react";
 import Particles from "react-tsparticles";
@@ -402,9 +402,12 @@ const Login = ({ setIsAuthenticated }) => {
         </form>
         <p className="text-gray-400 text-sm text-center mt-4">
           Don&apos;t have an account?{" "}
-          <a href="/register" className="text-[#00fffc] hover:underline">
-            Register
-          </a>
+          <Link
+                  to="/register"
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                >
+                  Register
+          </Link>
         </p>
       </div>
     </div>
