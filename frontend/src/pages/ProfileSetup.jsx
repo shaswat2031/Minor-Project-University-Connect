@@ -3,8 +3,10 @@ import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import ProfileBuilder from "../components/ProfileBuilder";
 import React from "react";
+import { useToast } from "../components/Toast";
 
 const ProfileSetup = () => {
+  const { success, error } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
   const initialProfile = location.state?.profile || {};
@@ -14,7 +16,7 @@ const ProfileSetup = () => {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
-      alert("You need to be logged in!");
+      error("You need to be logged in!");
       navigate("/login");
       return;
     }
@@ -125,7 +127,7 @@ const ProfileSetup = () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) {
-        alert("You need to be logged in!");
+        error("You need to be logged in!");
         navigate("/login");
         return;
       }
@@ -148,11 +150,11 @@ const ProfileSetup = () => {
       );
 
       console.log("Profile setup success:", response.data);
-      alert("Profile saved successfully!");
+      success("Profile saved successfully!");
       navigate("/my-profile");
-    } catch (error) {
-      console.error("Error saving profile:", error.response?.data || error);
-      alert(error.response?.data?.message || "Something went wrong!");
+    } catch (err) {
+      console.error("Error saving profile:", err.response?.data || err);
+      error(err.response?.data?.message || "Something went wrong!");
     } finally {
       setLoading(false);
     }

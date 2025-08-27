@@ -75,12 +75,19 @@ router.get("/questions", authOrTest, async (req, res) => {
     // Validate category exists
     const validCategories = [
       "React",
-      "Java",
+      "Java", 
       "Python",
       "JavaScript",
+      "Node.js",
       "Data Structures",
       "Algorithms",
       "Web Development",
+      "Array",
+      "Math",
+      "Stack",
+      "Linked List",
+      "Dynamic Programming",
+      "Easy DSA"
     ];
     if (!validCategories.includes(category)) {
       return res.status(400).json({ message: "Invalid category" });
@@ -131,8 +138,14 @@ router.get("/questions", authOrTest, async (req, res) => {
               $project: {
                 title: 1,
                 description: 1,
+                difficulty: 1,
+                language: 1,
                 constraints: 1,
                 starterCode: 1,
+                testCases: 1,
+                timeLimit: 1,
+                memoryLimit: 1,
+                tags: 1,
                 category: 1,
               },
             },
@@ -185,10 +198,11 @@ router.post("/submit", authOrTest, async (req, res) => {
       userId: req.body.userId,
       userName: req.body.userName,
       category: req.body.category,
-      answersCount: Object.keys(req.body.answers || {}).length,
+      answersCount: Array.isArray(req.body.answers) ? req.body.answers.length : Object.keys(req.body.answers || {}).length,
+      questionsCount: req.body.questions?.length || 0,
     });
 
-    let { userId, userName, category, answers } = req.body;
+    let { userId, userName, category, answers, questions: submittedQuestions } = req.body;
 
     // If using test tokens, use the provided userId, otherwise get from token
     if (req.user.id !== "test-user-123") {
@@ -196,30 +210,42 @@ router.post("/submit", authOrTest, async (req, res) => {
       console.log("Using user ID from token:", userId);
     }
 
-    // Fetch the same questions that were sent to frontend
-    console.log("Fetching questions for scoring...");
-    const [mcqQuestions, codingQuestions] = await Promise.all([
-      Question.find({ category }).limit(15),
-      CodingQuestion.find({ category }).limit(15),
-    ]);
+    // Validate the answers and questions
+    if (!answers || !submittedQuestions) {
+      return res.status(400).json({ error: "Answers and questions are required" });
+    }
 
-    console.log(
-      `Found ${mcqQuestions.length} MCQ and ${codingQuestions.length} coding questions`
-    );
+    // Handle both array and object format for answers
+    let answersArray;
+    if (Array.isArray(answers)) {
+      answersArray = answers;
+    } else {
+      // Convert object answers to array based on question order
+      answersArray = submittedQuestions.map((q, index) => answers[index.toString()] || answers[index]);
+    }
 
-    const formattedMcqQuestions = mcqQuestions.map((q) => ({
-      ...q.toObject(),
-      type: "mcq",
-    }));
-    const formattedCodingQuestions = codingQuestions.map((q) => ({
-      ...q.toObject(),
-      type: "coding",
-    }));
+    if (answersArray.length !== submittedQuestions.length) {
+      return res.status(400).json({ 
+        error: "Number of answers must match number of questions",
+        answersCount: answersArray.length,
+        questionsCount: submittedQuestions.length
+      });
+    }
 
-    const allQuestions = [
-      ...formattedMcqQuestions,
-      ...formattedCodingQuestions,
-    ];
+    // Validate question structure
+    const invalidQuestions = submittedQuestions.filter((q, idx) => !q._id || !q.type || q.correctAnswer === undefined);
+    if (invalidQuestions.length > 0) {
+      console.log("Invalid questions found:", invalidQuestions);
+      return res.status(400).json({ 
+        error: "Some questions are missing required fields (_id, type, correctAnswer)",
+        invalidCount: invalidQuestions.length
+      });
+    }
+
+    // Use the submitted questions for scoring instead of fetching new ones
+    console.log("Using submitted questions for scoring...");
+    
+    const allQuestions = submittedQuestions;
 
     if (allQuestions.length === 0) {
       console.log("No questions found for category:", category);
@@ -233,11 +259,28 @@ router.post("/submit", authOrTest, async (req, res) => {
     let mcqCount = 0;
 
     console.log("Calculating scores...");
+    console.log(`Total questions received: ${allQuestions.length}`);
+    
     allQuestions.forEach((question, index) => {
+      const userAnswer = answersArray[index];
+      const correctAnswer = question.correctAnswer;
+      const isCorrect = userAnswer === correctAnswer;
+      
+      console.log(`Question ${index + 1}:`, {
+        type: question.type,
+        questionText: (question.question || question.title || "").substring(0, 50) + "...",
+        correctAnswer: correctAnswer,
+        userAnswer: userAnswer,
+        isCorrect: isCorrect
+      });
+      
       if (question.type === "mcq") {
         mcqCount++;
-        if (answers[index] === question.correctAnswer) {
+        if (isCorrect) {
           correctCount++;
+          console.log(`  ✓ Correct! (+1 point)`);
+        } else {
+          console.log(`  ✗ Incorrect`);
         }
       }
     });
@@ -384,71 +427,285 @@ router.post("/coding/execute", authOrTest, async (req, res) => {
   try {
     const { code, language, questionId, testCaseIndex } = req.body;
 
+    console.log(`\n🔧 Code Execution Request:
+📝 Language: ${language}
+📋 Question ID: ${questionId}
+🧪 Test Case Index: ${testCaseIndex}
+� User: ${req.user?.id || 'test-user'}
+�💻 Code Preview: ${code.substring(0, 150)}...`);
+
+    // Validate input
+    if (!code || !language || !questionId || testCaseIndex === undefined) {
+      console.log("❌ Missing required fields");
+      return res.status(400).json({ 
+        success: false,
+        message: "Missing required fields: code, language, questionId, testCaseIndex" 
+      });
+    }
+
+    // Get question from database
+    console.log("🔍 Fetching question from database...");
     const question = await CodingQuestion.findById(questionId);
     if (!question) {
-      return res.status(404).json({ message: "Question not found" });
+      console.log("❌ Question not found in database");
+      return res.status(404).json({ 
+        success: false,
+        message: "Question not found" 
+      });
     }
 
+    console.log(`✅ Question found: "${question.title}" (${question.language})`);
+    console.log(`📊 Total test cases: ${question.testCases.length}`);
+
+    // Get test case
     const testCase = question.testCases[testCaseIndex];
     if (!testCase) {
-      return res.status(404).json({ message: "Test case not found" });
+      console.log(`❌ Test case ${testCaseIndex} not found`);
+      return res.status(404).json({ 
+        success: false,
+        message: "Test case not found" 
+      });
     }
 
-    let result;
-    try {
-      if (language === "JavaScript") {
-        const vm = new VM({
-          timeout: 5000,
-          sandbox: {
-            console: {
-              log: () => {}, // Disable console.log for security
-            },
-          },
-        });
+    console.log(`📊 Test Case ${testCaseIndex}: 
+📥 Input: "${testCase.input}"
+🎯 Expected: "${testCase.expectedOutput}"`);
 
-        // Execute the code with the test input
-        const executeCode = `
-          ${code}
+    // Language mapping for Judge0
+    const LANGUAGE_IDS = {
+      javascript: 63,  // Node.js
+      python: 71,      // Python 3
+      java: 62,        // OpenJDK 13
+      cpp: 54,         // C++ (GCC 9.2.0)
+      'c++': 54,
+      c: 50            // C (GCC 9.2.0)
+    };
+
+    const normalizedLanguage = language.toLowerCase();
+    const languageId = LANGUAGE_IDS[normalizedLanguage];
+    
+    if (!languageId) {
+      console.log(`❌ Unsupported language: ${language}`);
+      return res.status(400).json({ 
+        success: false,
+        message: `Unsupported language: ${language}. Supported: ${Object.keys(LANGUAGE_IDS).join(', ')}` 
+      });
+    }
+
+    // Validate language matches question (allow flexibility for language switching)
+    const questionLanguage = question.language.toLowerCase();
+    if (questionLanguage !== normalizedLanguage) {
+      console.log(`⚠️  Language switch: Question originally in ${question.language}, executing in ${language}`);
+      // Allow language switching - don't block execution
+    }
+
+    // Use Judge0 API for code execution
+    const axios = require('axios');
+    const JUDGE0_API_URL = process.env.JUDGE0_API_URL || 'https://judge0-ce.p.rapidapi.com';
+    const JUDGE0_API_KEY = process.env.JUDGE0_API_KEY;
+
+    if (!JUDGE0_API_KEY) {
+      console.error('❌ JUDGE0_API_KEY not found in environment variables');
+      return res.status(500).json({ 
+        success: false,
+        message: "Code execution service not configured" 
+      });
+    }
+
+    const headers = {
+      'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com',
+      'X-RapidAPI-Key': JUDGE0_API_KEY,
+      'Content-Type': 'application/json',
+    };
+
+    // Prepare code based on language
+    let finalCode = code;
+    let stdin = testCase.input || '';
+
+    // Language-specific code preparation
+    if (normalizedLanguage === 'python') {
+      // Python: ensure proper input/output handling
+      if (!code.includes('input()') && !code.includes('print(')) {
+        // Extract function name from the code
+        const funcMatch = code.match(/def\s+(\w+)\s*\(/);
+        const functionName = funcMatch ? funcMatch[1] : 'solution';
+        
+        // For palindrome and similar single-input functions
+        if (testCase.input && !testCase.input.includes('\n')) {
+          // Single input case
+          const inputValue = testCase.input.trim();
+          finalCode = `${code}\n\n# Test execution\nresult = ${functionName}(${inputValue})\nprint(result)`;
+        } else {
+          // Multi-line input case (like Two Sum with array + target)
+          const inputLines = testCase.input.split('\n').filter(line => line.trim());
           
-          // Parse input if needed
-          const input = ${JSON.stringify(testCase.input)};
-          
-          // Execute the solution (assuming main function exists)
-          if (typeof solution === 'function') {
-            JSON.stringify(solution(input));
-          } else if (typeof main === 'function') {
-            JSON.stringify(main(input));
+          if (functionName === 'twoSum' && inputLines.length === 2) {
+            // Two Sum specific: first line is array, second is target
+            const arrayInput = inputLines[0]; // "[2,7,11,15]"
+            const targetInput = inputLines[1]; // "9"
+            finalCode = `${code}\n\n# Test execution for Two Sum\nimport json\nnums = ${arrayInput}\ntarget = ${targetInput}\nresult = ${functionName}(nums, target)\nprint(json.dumps(result, separators=(',', ':')))`;  // No spaces in JSON output
           } else {
-            'No main function found';
+            // Generic multi-line input case
+            finalCode = `${code}\n\n# Test execution with multi-line input\ninput_data = """${testCase.input}""".strip()\nlines = input_data.split('\\n')\n# TODO: Add specific parsing for this function type`;
           }
-        `;
-
-        result = vm.run(executeCode);
-      } else {
-        // For other languages, you'd need to implement language-specific execution
-        return res.status(400).json({ message: "Language not supported yet" });
+        }
       }
+    } else if (normalizedLanguage === 'javascript') {
+      // JavaScript: wrap in proper I/O handling for test cases
+      if (!code.includes('readline') && !code.includes('process.stdin')) {
+        // Parse multi-line input for function calls
+        const inputLines = testCase.input.split('\n').filter(line => line.trim());
+        
+        // For Two Sum pattern: array on line 1, target on line 2
+        if (inputLines.length >= 2 && inputLines[0].startsWith('[') && inputLines[0].endsWith(']')) {
+          const arrayInput = inputLines[0];
+          const secondParam = inputLines[1];
+          
+          // Check if it's a number or another parameter
+          const isNumber = /^-?\d+$/.test(secondParam.trim());
+          const parsedSecond = isNumber ? parseInt(secondParam.trim()) : `"${secondParam.trim()}"`;
+          
+          finalCode = `${code}\n\n// Test execution
+try {
+  const nums = ${arrayInput};
+  const target = ${parsedSecond};
+  
+  // Try to find main function (twoSum, reverseString, etc.)
+  let result;
+  if (typeof twoSum === 'function') {
+    result = twoSum(nums, target);
+  } else if (typeof reverseString === 'function') {
+    result = reverseString(nums);
+  } else if (typeof solution === 'function') {
+    result = solution(nums, target);
+  } else {
+    // Try to eval the last expression if it's just code
+    result = eval("(" + nums + ", " + target + ")");
+  }
+  
+  console.log(JSON.stringify(result));
+} catch (error) {
+  console.error("Execution error:", error.message);
+}`;
+        } else if (inputLines.length === 1) {
+          // Single parameter case
+          if (inputLines[0].startsWith('[') && inputLines[0].endsWith(']')) {
+            finalCode = `${code}\n\n// Test execution\nif (typeof solution === 'function') {\n  const input = ${inputLines[0]};\n  const result = solution(input);\n  console.log(JSON.stringify(result));\n}`;
+          } else {
+            finalCode = `${code}\n\n// Test execution\nif (typeof solution === 'function') {\n  const result = solution('${inputLines[0]}');\n  console.log(result);\n}`;
+          }
+        }
+      }
+    } else if (normalizedLanguage === 'java') {
+      // Java: ensure proper class structure and input handling
+      if (!code.includes('public static void main')) {
+        finalCode = `import java.util.*;\n\npublic class Solution {\n${code}\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        // Add test execution logic here\n    }\n}`;
+      }
+    }
 
-      const passed = result.trim() === testCase.expectedOutput.trim();
+    console.log(`🚀 Submitting to Judge0:
+🔗 URL: ${JUDGE0_API_URL}/submissions
+🎯 Language ID: ${languageId} (${language})
+📥 STDIN: "${stdin}"
+💻 Final Code (first 300 chars): ${finalCode.substring(0, 300)}...`);
 
-      res.json({
-        passed,
-        output: result,
-        expected: testCase.expectedOutput,
-        input: testCase.input,
-      });
-    } catch (execError) {
-      res.json({
-        passed: false,
-        output: execError.message,
-        expected: testCase.expectedOutput,
-        input: testCase.input,
-        error: true,
+    // Submit code to Judge0
+    const submissionData = {
+      source_code: finalCode,
+      language_id: languageId,
+      stdin: stdin,
+      cpu_time_limit: 5,
+      memory_limit: 128000,
+      wait: false
+    };
+
+    let submissionResponse;
+    try {
+      submissionResponse = await axios.post(`${JUDGE0_API_URL}/submissions`, submissionData, { headers });
+      console.log(`✅ Code submitted successfully`);
+    } catch (error) {
+      console.error('❌ Judge0 submission error:', error.response?.data || error.message);
+      return res.status(500).json({ 
+        success: false,
+        message: "Failed to submit code for execution",
+        error: error.response?.data || error.message
       });
     }
+
+    const token = submissionResponse.data.token;
+    console.log(`🎫 Submission token: ${token}`);
+
+    // Poll for result (with timeout)
+    let result;
+    const maxAttempts = 15;
+    const pollInterval = 1000; // 1 second
+
+    console.log(`⏳ Polling for results...`);
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, pollInterval));
+      
+      try {
+        const resultResponse = await axios.get(`${JUDGE0_API_URL}/submissions/${token}`, { headers });
+        result = resultResponse.data;
+        
+        console.log(`📊 Attempt ${attempt + 1}: Status ID ${result.status.id} (${result.status.description})`);
+        
+        // Status 1: In Queue, 2: Processing, 3+: Completed
+        if (result.status.id > 2) {
+          console.log(`✅ Execution completed after ${attempt + 1} attempts`);
+          break;
+        }
+      } catch (error) {
+        console.error(`❌ Error polling result (attempt ${attempt + 1}):`, error.message);
+      }
+    }
+
+    if (!result || result.status.id <= 2) {
+      console.log(`❌ Execution timed out after ${maxAttempts} attempts`);
+      return res.status(408).json({ 
+        success: false,
+        message: "Code execution timed out" 
+      });
+    }
+
+    // Process result
+    const output = (result.stdout || '').trim();
+    const expectedOutput = (testCase.expectedOutput || '').trim();
+    const passed = output === expectedOutput;
+
+    console.log(`✅ Execution Result:
+📤 Output: "${output}"
+🎯 Expected: "${expectedOutput}"
+✔️ Passed: ${passed}
+⏱️ Time: ${result.time}s
+💾 Memory: ${result.memory}KB
+🔢 Status: ${result.status.description}
+${result.stderr ? `❌ Error: ${result.stderr}` : ''}
+`);
+
+    const response = {
+      success: true,
+      passed: passed,
+      output: output,
+      expected: expectedOutput,
+      executionTime: result.time,
+      memory: result.memory,
+      status: result.status.description,
+      statusId: result.status.id,
+      stderr: result.stderr || null,
+      testCaseIndex: testCaseIndex,
+      input: testCase.input
+    };
+
+    return res.json(response);
+
   } catch (error) {
-    console.error("Error executing code:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error('❌ Coding execution error:', error);
+    return res.status(500).json({ 
+      success: false,
+      message: "Internal server error during code execution",
+      error: error.message
+    });
   }
 });
 

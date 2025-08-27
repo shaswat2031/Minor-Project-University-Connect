@@ -112,28 +112,28 @@ const Login = ({ setIsAuthenticated }) => {
       );
 
     // Continuous animations
-    gsap.to(glowRef1.current, {
-      rotation: 360,
-      duration: 20,
-      ease: "none",
-      repeat: -1,
-    });
+    // gsap.to(glowRef1.current, {
+    //   rotation: 360,
+    //   duration: 20,
+    //   ease: "none",
+    //   repeat: -1,
+    // });
 
-    gsap.to(glowRef2.current, {
-      rotation: -360,
-      duration: 25,
-      ease: "none",
-      repeat: -1,
-    });
+    // gsap.to(glowRef2.current, {
+    //   rotation: -360,
+    //   duration: 25,
+    //   ease: "none",
+    //   repeat: -1,
+    // });
 
-    // Floating animation for form
-    gsap.to(formRef.current, {
-      y: -10,
-      duration: 3,
-      ease: "power1.inOut",
-      yoyo: true,
-      repeat: -1,
-    });
+    // // Floating animation for form
+    // gsap.to(formRef.current, {
+    //   y: -10,
+    //   duration: 3,
+    //   ease: "power1.inOut",
+    //   yoyo: true,
+    //   repeat: -1,
+    // });
   }, []);
 
   const handleInputFocus = (index) => {

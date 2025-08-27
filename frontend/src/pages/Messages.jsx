@@ -1,8 +1,11 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import chatService from "../services/chatService";
+import { useToast } from "../components/Toast";
 
 const Messages = () => {
+  const { error } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
   const [selectedUser, setSelectedUser] = useState(
@@ -21,6 +24,21 @@ const Messages = () => {
   const token = localStorage.getItem("token");
   const typingTimeoutRef = useRef(null);
   const messagesEndRef = useRef(null);
+
+  // Helper function for time formatting
+  const formatMessageTime = (timestamp) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInHours = (now - date) / (1000 * 60 * 60);
+    
+    if (diffInHours < 24) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else if (diffInHours < 48) {
+      return 'Yesterday';
+    } else {
+      return date.toLocaleDateString();
+    }
+  };
 
   // Scroll to bottom of messages
   const scrollToBottom = () => {
@@ -138,7 +156,7 @@ const Messages = () => {
         error?.error ||
         error?.message ||
         "Failed to send message. Please try again.";
-      alert(errorMessage);
+      error(errorMessage);
 
       // Show additional debugging info in console
       console.error("Full error object:", error);
@@ -150,7 +168,7 @@ const Messages = () => {
       if (!data || !data.senderId || !selectedUser) return;
 
       if (data.senderId === selectedUser.id) {
-        setTypingUser(data.isTyping ? data.senderId : null);
+        setTypingUser(data.isTyping ? { name: data.senderName || 'User', id: data.senderId } : null);
       }
     });
 
@@ -241,7 +259,7 @@ const Messages = () => {
         errorMessage = "No internet connection. Please check your network.";
       }
 
-      alert(errorMessage);
+      error(errorMessage);
     }
   };
 
@@ -289,9 +307,9 @@ const Messages = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-gray-900 to-black text-white">
       <div className="flex h-screen">
-        {/* Conversations Sidebar */}
-        <div className="w-1/3 bg-gray-800 border-r border-gray-700">
-          <div className="p-4 border-b border-gray-700">
+        {/* Enhanced Conversations Sidebar */}
+        <div className="w-1/3 bg-gray-800/80 backdrop-blur-sm border-r border-gray-700/50">
+          <div className="p-4 border-b border-gray-700/50">
             <h2 className="text-xl font-bold text-blue-400">Messages</h2>
             <p className="text-sm text-gray-400">
               {socketConnected ? (
@@ -314,27 +332,47 @@ const Messages = () => {
                   <div
                     key={conversation._id}
                     onClick={() => selectUser(conversation.otherUser)}
-                    className={`p-4 border-b border-gray-700 cursor-pointer hover:bg-gray-700 transition ${
+                    className={`p-4 border-b border-gray-700/50 cursor-pointer transition-all duration-200 hover:bg-gray-700/50 relative ${
                       selectedUser?.id === conversation.otherUser.id
-                        ? "bg-gray-700"
+                        ? "bg-blue-600/20 border-l-4 border-l-blue-500"
                         : ""
                     }`}
                   >
                     <div className="flex items-center">
-                      <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center mr-3">
-                        {conversation.otherUser.name.charAt(0).toUpperCase()}
+                      <div className="relative">
+                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3 text-white font-semibold shadow-lg">
+                          {conversation.otherUser.name.charAt(0).toUpperCase()}
+                        </div>
+                        {/* Online indicator */}
+                        {isUserOnline(conversation.otherUser.id) && (
+                          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-gray-900 animate-pulse"></div>
+                        )}
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold">
-                          {conversation.otherUser.name}
-                        </h3>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <h3 className="font-semibold text-white truncate">
+                            {conversation.otherUser.name}
+                          </h3>
+                          {conversation.lastMessage?.createdAt && (
+                            <span className="text-xs text-gray-400 flex-shrink-0">
+                              {formatMessageTime(conversation.lastMessage.createdAt)}
+                            </span>
+                          )}
+                        </div>
+                        
                         <p className="text-sm text-gray-400 truncate">
-                          {conversation.lastMessage?.content ||
-                            "No messages yet"}
+                          {conversation.lastMessage?.content || "No messages yet"}
                         </p>
                       </div>
-                      {isUserOnline(conversation.otherUser.id) && (
-                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      
+                      {/* Unread indicator */}
+                      {conversation.unreadCount > 0 && (
+                        <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center ml-2">
+                          <span className="text-xs text-white font-bold">
+                            {conversation.unreadCount > 9 ? '9+' : conversation.unreadCount}
+                          </span>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -344,97 +382,181 @@ const Messages = () => {
           </div>
         </div>
 
-        {/* Chat Area */}
-        <div className="flex-1 flex flex-col">
+        {/* Enhanced Chat Area */}
+        <div className="flex-1 flex flex-col bg-gray-900">
           {selectedUser ? (
             <>
-              {/* Chat Header */}
-              <div className="p-4 bg-gray-800 border-b border-gray-700 flex items-center">
-                <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center mr-3">
-                  {selectedUser.name.charAt(0).toUpperCase()}
+              {/* Enhanced Chat Header */}
+              <div className="p-4 bg-gray-800/80 backdrop-blur-sm border-b border-gray-700/50 flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className="relative">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3 text-white font-semibold">
+                      {selectedUser.name.charAt(0).toUpperCase()}
+                    </div>
+                    {isUserOnline(selectedUser.id) && (
+                      <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-gray-800"></div>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <h3 className="font-semibold text-white">{selectedUser.name}</h3>
+                    <p className="text-sm text-gray-400">
+                      {isUserOnline(selectedUser.id) ? (
+                        <span className="text-green-400">● Online</span>
+                      ) : (
+                        "Offline"
+                      )}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold">{selectedUser.name}</h3>
-                  <p className="text-sm text-gray-400">
-                    {isUserOnline(selectedUser.id) ? "Online" : "Offline"}
-                  </p>
+                
+                {/* Chat actions */}
+                <div className="flex items-center space-x-2">
+                  <button className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-full transition">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </button>
                 </div>
               </div>
 
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {messages.map((message) => {
+              {/* Enhanced Messages */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-gray-900 to-gray-800">
+                {messages.map((message, index) => {
                   if (!message || !message._id || !message.sender) return null;
 
+                  const isCurrentUser = message.sender._id === currentUserId;
+                  const showAvatar = index === 0 || messages[index - 1]?.sender._id !== message.sender._id;
+                  const isLastInGroup = index === messages.length - 1 || messages[index + 1]?.sender._id !== message.sender._id;
+
                   return (
-                    <div
+                    <motion.div
                       key={message._id}
-                      className={`flex ${
-                        message.sender._id === currentUserId
-                          ? "justify-end"
-                          : "justify-start"
-                      }`}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className={`flex ${isCurrentUser ? "justify-end" : "justify-start"}`}
                     >
-                      <div
-                        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                          message.sender._id === currentUserId
-                            ? "bg-blue-600 text-white"
-                            : "bg-gray-700 text-white"
-                        }`}
-                      >
-                        <p className="break-words">{message.content}</p>
-                        <p className="text-xs opacity-75 mt-1">
-                          {new Date(message.createdAt).toLocaleTimeString()}
-                        </p>
+                      <div className={`flex items-end space-x-2 max-w-xs lg:max-w-md ${isCurrentUser ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                        {!isCurrentUser && showAvatar && (
+                          <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
+                            {message.sender.name?.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        
+                        <div
+                          className={`px-4 py-2 rounded-2xl shadow-lg ${
+                            isCurrentUser
+                              ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-br-md"
+                              : "bg-gray-700 text-white rounded-bl-md"
+                          } ${!showAvatar && !isCurrentUser ? 'ml-10' : ''}`}
+                        >
+                          {!isCurrentUser && showAvatar && (
+                            <p className="text-xs text-gray-300 mb-1 font-medium">
+                              {message.sender.name}
+                            </p>
+                          )}
+                          
+                          <p className="break-words">{message.content}</p>
+                          
+                          {isLastInGroup && (
+                            <p className={`text-xs mt-1 ${isCurrentUser ? 'text-blue-100' : 'text-gray-400'}`}>
+                              {formatMessageTime(message.createdAt)}
+                              {isCurrentUser && (
+                                <span className="ml-2">
+                                  {message.read ? '✓✓' : '✓'}
+                                </span>
+                              )}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    </motion.div>
                   );
                 })}
 
+                {/* Enhanced Typing Indicator */}
                 {typingUser && (
-                  <div className="flex justify-start">
-                    <div className="bg-gray-700 px-4 py-2 rounded-lg">
-                      <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100"></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-200"></div>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex justify-start"
+                  >
+                    <div className="flex items-end space-x-2">
+                      <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                        {typingUser.name?.charAt(0).toUpperCase()}
+                      </div>
+                      
+                      <div className="bg-gray-700 px-4 py-2 rounded-2xl rounded-bl-md">
+                        <div className="flex items-center space-x-1">
+                          <span className="text-sm text-gray-300 mr-2">{typingUser.name} is typing</span>
+                          <div className="flex space-x-1">
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 )}
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Message Input */}
-              <div className="p-4 bg-gray-800 border-t border-gray-700">
-                <div className="flex space-x-2">
-                  <input
-                    type="text"
-                    value={newMessage}
-                    onChange={handleTyping}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Type a message..."
-                    disabled={!socketConnected}
-                    className="flex-1 p-3 bg-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                  />
+              {/* Enhanced Message Input */}
+              <div className="p-4 bg-gray-800/80 backdrop-blur-sm border-t border-gray-700/50">
+                <div className="flex items-center space-x-3">
+                  <div className="flex-1 relative">
+                    <input
+                      type="text"
+                      value={newMessage}
+                      onChange={handleTyping}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Type a message..."
+                      disabled={!socketConnected}
+                      className="w-full p-3 pr-12 bg-gray-700 rounded-full text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 transition-all"
+                    />
+                    
+                    {/* Emoji button */}
+                    <button className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 100-2 1 1 0 000 2zm7-1a1 1 0 11-2 0 1 1 0 012 0zm-.464 5.535a1 1 0 10-1.415-1.414 3 3 0 01-4.242 0 1 1 0 00-1.415 1.414 5 5 0 007.072 0z" />
+                      </svg>
+                    </button>
+                  </div>
+                  
                   <button
                     onClick={sendMessage}
                     disabled={!newMessage.trim() || !socketConnected}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                   >
-                    Send
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
                   </button>
                 </div>
+                
+                {!socketConnected && (
+                  <div className="mt-2 text-center">
+                    <span className="text-sm text-yellow-400">● Connecting...</span>
+                  </div>
+                )}
               </div>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 flex items-center justify-center bg-gradient-to-b from-gray-900 to-gray-800">
               <div className="text-center">
-                <h3 className="text-xl font-semibold mb-2">
-                  No conversation selected
+                <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                </div>
+                
+                <h3 className="text-xl font-semibold mb-2 text-white">
+                  Start a Conversation
                 </h3>
                 <p className="text-gray-400">
-                  Choose a conversation to start messaging
+                  Select a student from the sidebar to begin messaging
                 </p>
               </div>
             </div>

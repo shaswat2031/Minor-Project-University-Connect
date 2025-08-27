@@ -10,8 +10,10 @@ import {
   FaSearch,
   FaFilter,
 } from "react-icons/fa";
+import { useToast } from "../components/Toast";
 
 const AdminPanel = () => {
+  const { success, error, info } = useToast();
   const [activeTab, setActiveTab] = useState("mcq");
   const [mcqQuestions, setMcqQuestions] = useState([]);
   const [codingQuestions, setCodingQuestions] = useState([]);
@@ -80,9 +82,9 @@ const AdminPanel = () => {
       );
       setMcqQuestions(response.data.questions);
       setPagination(response.data.pagination);
-    } catch (error) {
-      console.error("Error fetching MCQ questions:", error);
-      alert("Failed to fetch MCQ questions");
+    } catch (err) {
+      console.error("Error fetching MCQ questions:", err);
+      error("Failed to fetch MCQ questions");
     } finally {
       setLoading(false);
     }
@@ -105,9 +107,9 @@ const AdminPanel = () => {
       );
       setCodingQuestions(response.data.questions);
       setPagination(response.data.pagination);
-    } catch (error) {
-      console.error("Error fetching coding questions:", error);
-      alert("Failed to fetch coding questions");
+    } catch (err) {
+      console.error("Error fetching coding questions:", err);
+      error("Failed to fetch coding questions");
     } finally {
       setLoading(false);
     }
@@ -135,7 +137,7 @@ const AdminPanel = () => {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
 
-      alert(
+      success(
         `MCQ question ${editingQuestion ? "updated" : "created"} successfully!`
       );
       setShowMcqModal(false);
@@ -147,9 +149,9 @@ const AdminPanel = () => {
         category: "",
       });
       fetchMcqQuestions(currentPage);
-    } catch (error) {
-      console.error("Error saving MCQ question:", error);
-      alert("Failed to save MCQ question");
+    } catch (err) {
+      console.error("Error saving MCQ question:", err);
+      error("Failed to save MCQ question");
     }
   };
 
@@ -169,7 +171,7 @@ const AdminPanel = () => {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
 
-      alert(
+      success(
         `Coding question ${
           editingQuestion ? "updated" : "created"
         } successfully!`
@@ -190,9 +192,9 @@ const AdminPanel = () => {
         tags: [],
       });
       fetchCodingQuestions(currentPage);
-    } catch (error) {
-      console.error("Error saving coding question:", error);
-      alert("Failed to save coding question");
+    } catch (err) {
+      console.error("Error saving coding question:", err);
+      error("Failed to save coding question");
     }
   };
 
@@ -209,15 +211,15 @@ const AdminPanel = () => {
         }
       );
 
-      alert("Question deleted successfully!");
+      success("Question deleted successfully!");
       if (type === "mcq") {
         fetchMcqQuestions(currentPage);
       } else {
         fetchCodingQuestions(currentPage);
       }
-    } catch (error) {
-      console.error("Error deleting question:", error);
-      alert("Failed to delete question");
+    } catch (err) {
+      console.error("Error deleting question:", err);
+      error("Failed to delete question");
     }
   };
 

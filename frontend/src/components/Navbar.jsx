@@ -127,6 +127,18 @@ const Navbar = ({ isAuthenticated, setIsAuthenticated }) => {
                   Certifications
                 </Link>
                 <Link
+                  to="/messages"
+                  className="text-white hover:text-[#00fffc] transition-colors duration-300 font-semibold"
+                >
+                  Messages
+                </Link>
+                <Link
+                  to="/code-runner"
+                  className="text-white hover:text-[#00fffc] transition-colors duration-300 font-semibold"
+                >
+                  Code Runner
+                </Link>
+                <Link
                   to="/talent-marketplace"
                   className="text-white hover:text-[#00fffc] transition-colors duration-300 font-semibold"
                 >
@@ -210,23 +222,6 @@ const Navbar = ({ isAuthenticated, setIsAuthenticated }) => {
                         onClick={() => setDropdownOpen(false)}
                       >
                         <span className="relative z-10">My Profile</span>
-                        <motion.span
-                          initial={{ x: "-100%" }}
-                          whileHover={{ x: 0 }}
-                          transition={{
-                            type: "tween",
-                            ease: "easeOut",
-                            duration: 0.3,
-                          }}
-                          className="absolute inset-0 bg-[#00fffc]/10"
-                        />
-                      </Link>
-                      <Link
-                        to="/enhanced-profile"
-                        className="relative block py-3.5 px-4.5 font-semibold text-white overflow-hidden group"
-                        onClick={() => setDropdownOpen(false)}
-                      >
-                        <span className="relative z-10">Enhanced Profile</span>
                         <motion.span
                           initial={{ x: "-100%" }}
                           whileHover={{ x: 0 }}
@@ -322,6 +317,20 @@ const Navbar = ({ isAuthenticated, setIsAuthenticated }) => {
                       onClick={() => setMenuOpen(false)}
                     >
                       Certifications
+                    </Link>
+                    <Link
+                      to="/messages"
+                      className="text-white hover:text-[#00fffc] transition-colors duration-300 font-semibold text-center py-2"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      Messages
+                    </Link>
+                    <Link
+                      to="/code-runner"
+                      className="text-white hover:text-[#00fffc] transition-colors duration-300 font-semibold text-center py-2"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      Code Runner
                     </Link>
                     <Link
                       to="/talent-marketplace"

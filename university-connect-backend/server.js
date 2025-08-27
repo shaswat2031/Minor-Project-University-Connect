@@ -3,6 +3,8 @@ require("dotenv").config();
 // Add debug logging at the top
 console.log("🔍 Environment Variables Check:");
 console.log("MONGODB_URI:", process.env.MONGODB_URI ? "Set ✅" : "Not set ❌");
+console.log("JUDGE0_API_KEY:", process.env.JUDGE0_API_KEY ? "Set ✅" : "Not set ❌");
+console.log("JUDGE0_API_URL:", process.env.JUDGE0_API_URL || "Not set");
 console.log(
   "MongoDB URI starts with:",
   process.env.MONGODB_URI

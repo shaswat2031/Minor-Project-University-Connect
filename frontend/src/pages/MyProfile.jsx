@@ -20,6 +20,7 @@ import {
   FaCalendarAlt,
   FaExternalLinkAlt,
 } from "react-icons/fa";
+import { useToast } from "../components/Toast";
 import {
   getBadgeColor,
   getBadgeEmoji,
@@ -27,6 +28,7 @@ import {
 import useCertifications from "../hooks/useCertifications";
 
 const MyProfile = () => {
+  const { success, error: toastError } = useToast();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -113,11 +115,11 @@ const MyProfile = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      alert("Profile updated successfully!");
+      success("Profile updated successfully!");
       setEditing(false);
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      alert(error.response?.data?.message || "Error updating profile");
+    } catch (err) {
+      console.error("Error updating profile:", err);
+      toastError(err.response?.data?.message || "Error updating profile");
     }
   };
 
