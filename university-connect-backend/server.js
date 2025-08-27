@@ -27,6 +27,7 @@ const profileRoutes = require("./routes/profileRoutes");
 const studentRoutes = require("./routes/studentRoutes");
 const serviceRoutes = require("./routes/serviceRoutes");
 const certificationRoutes = require("./routes/certificationRoutes");
+const userCertificationRoutes = require("./routes/userCertificationRoutes");
 const questionRoutes = require("./routes/questionRoutes");
 const talentMarketplaceRoutes = require("./routes/talentMarketplace");
 const chatRoutes = require("./routes/chatRoutes");
@@ -122,6 +123,7 @@ console.log('✅ Profile routes mounted at /api/profile');
 app.use('/api/students', studentRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/certifications', certificationRoutes);
+app.use('/api/user-certifications', userCertificationRoutes); // New route for public profile certifications
 app.use('/api/questions', questionRoutes);
 app.use('/api/marketplace', talentMarketplaceRoutes);
 app.use('/api/talent-marketplace', talentMarketplaceRoutes); // Add alternative path

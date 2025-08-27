@@ -129,9 +129,9 @@ const ProfilePage = () => {
           return;
         }
         
-        // If not available in profile, fetch them directly
+        // If not available in profile, fetch them from the dedicated API endpoint
         const response = await axios.get(
-          `${import.meta.env.VITE_API_URL}/api/certifications/user/${userId}`,
+          `${import.meta.env.VITE_API_URL}/api/user-certifications/user/${userId}`,
           {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -142,7 +142,23 @@ const ProfilePage = () => {
         setCertifications(response.data.certifications || []);
       } catch (error) {
         console.error("Error fetching certifications:", error);
-        setCertifications([]);
+        
+        // As a fallback, try the original certification endpoint
+        try {
+          const fallbackResponse = await axios.get(
+            `${import.meta.env.VITE_API_URL}/api/certifications/user/${userId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+            }
+          );
+          console.log("Fetched certifications from fallback:", fallbackResponse.data);
+          setCertifications(fallbackResponse.data.certifications || []);
+        } catch (fallbackError) {
+          console.error("Fallback certification fetch also failed:", fallbackError);
+          setCertifications([]);
+        }
       } finally {
         setCertificationsLoading(false);
       }
