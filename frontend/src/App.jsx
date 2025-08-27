@@ -22,6 +22,7 @@ import MyProfile from "./pages/MyProfile";
 import Privacy from "./pages/Privacy";
 import Messages from "./pages/Messages"; // Import Messages component
 import CodeRunner from "./pages/CodeRunner"; // Import CodeRunner component
+import ResumeBuilder from "./pages/ResumeBuilder"; // Import ResumeBuilder component
 import ChatButton from "./components/Chat/ChatButton";
 import AdminPanel from "./pages/AdminPanel";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
@@ -109,6 +110,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <Certifications />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/resume-builder"
+              element={
+                <ProtectedRoute>
+                  <ResumeBuilder />
                 </ProtectedRoute>
               }
             />

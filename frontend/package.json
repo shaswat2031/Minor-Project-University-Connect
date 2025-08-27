@@ -20,6 +20,7 @@
     "face-api.js": "^0.22.2",
     "framer-motion": "^12.23.12",
     "gsap": "^3.13.0",
+    "html2canvas": "^1.4.1",
     "jspdf": "^2.5.2",
     "monaco-editor": "^0.45.0",
     "prismjs": "^1.30.0",

@@ -8,6 +8,7 @@ import {
   FaUserShield,
   FaLock,
   FaRobot,
+  FaFileAlt
 } from "react-icons/fa";
 
 const Navbar = ({ isAuthenticated, setIsAuthenticated }) => {
@@ -217,6 +218,22 @@ const Navbar = ({ isAuthenticated, setIsAuthenticated }) => {
                         />
                       </Link>
                       <Link
+                        to="/resume-builder"
+                        className="relative block py-3.5 px-4.5 font-semibold text-white overflow-hidden group"
+                        onClick={() => setDropdownOpen(false)}
+                      >
+                        <span className="relative z-10 flex items-center gap-2">
+                          <FaFileAlt className="text-[#00fffc]" />
+                          Resume Builder
+                        </span>
+                        <motion.span
+                          initial={{ x: "-100%" }}
+                          whileHover={{ x: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className="absolute inset-0 bg-gradient-to-r from-[#00fffc]/20 to-transparent z-0"
+                        />
+                      </Link>
+                      <Link
                         to="/my-profile"
                         className="relative block py-3.5 px-4.5 font-semibold text-white overflow-hidden group"
                         onClick={() => setDropdownOpen(false)}
@@ -338,6 +355,13 @@ const Navbar = ({ isAuthenticated, setIsAuthenticated }) => {
                       onClick={() => setMenuOpen(false)}
                     >
                       Talent Marketplace
+                    </Link>
+                      <Link
+                      to="/resume-builder"
+                      className="text-white hover:text-[#00fffc] transition-colors duration-300 font-semibold text-center py-2"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      Resume Builder
                     </Link>
                     <Link
                       to="/my-profile"
