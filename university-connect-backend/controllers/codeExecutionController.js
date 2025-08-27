@@ -1,17 +1,26 @@
 const CodingQuestion = require('../models/CodingQuestion');
 const { executeCode } = require('../services/judge0Service');
 
-// Language mapping for Judge0
+// Language mapping for Judge0 (case-insensitive)
 const LANGUAGE_IDS = {
-  JavaScript: 63,  // Node.js 12.14.0
-  Python: 71,      // Python 3.8.1
-  Java: 62,        // OpenJDK 13.0.1
+  javascript: 63,  // Node.js 12.14.0
+  python: 71,      // Python 3.8.1
+  java: 62,        // OpenJDK 13.0.1
+  cpp: 54,         // C++ (GCC 9.2.0)
+  'c++': 54,       // C++ (GCC 9.2.0)
+  c: 50,           // C (GCC 9.2.0)
+};
+
+// Helper function to normalize language name
+const normalizeLanguage = (lang) => {
+  if (!lang) return null;
+  return lang.toLowerCase().trim();
 };
 
 // Execute submitted code
 exports.executeCode = async (req, res) => {
   try {
-    const { code, language, questionId, testCaseIndex } = req.body;
+    const { code, language, questionId, testCaseIndex, input } = req.body;
 
     // Enhanced input validation
     if (!code) {
@@ -28,7 +37,10 @@ exports.executeCode = async (req, res) => {
       });
     }
 
-    if (!LANGUAGE_IDS[language]) {
+    // Normalize language name
+    const normalizedLanguage = normalizeLanguage(language);
+    
+    if (!LANGUAGE_IDS[normalizedLanguage]) {
       return res.status(400).json({
         success: false,
         error: `Unsupported language: ${language}. Supported languages are: ${Object.keys(LANGUAGE_IDS).join(', ')}`
@@ -60,19 +72,19 @@ exports.executeCode = async (req, res) => {
       });
     }
 
-    // Validate language matches question requirements
-    if (question.language.toLowerCase() !== language.toLowerCase()) {
+    // Validate language matches question requirements (case-insensitive)
+    const questionLanguage = normalizeLanguage(question.language);
+    if (questionLanguage !== normalizedLanguage) {
       return res.status(400).json({
         success: false,
         error: `This question requires ${question.language}. Submitted code is in ${language}`
       });
     }
 
-    // Get test case with validation
-    const testCase = testCaseIndex !== undefined 
-      ? question.testCases[testCaseIndex]
-      : null;
-
+    // Get test case with validation or use provided input
+    let testInput = input || '';
+    let expectedOutput = '';
+    
     if (testCaseIndex !== undefined) {
       if (testCaseIndex < 0 || testCaseIndex >= question.testCases.length) {
         return res.status(400).json({
@@ -81,12 +93,16 @@ exports.executeCode = async (req, res) => {
         });
       }
       
+      const testCase = question.testCases[testCaseIndex];
       if (!testCase) {
         return res.status(404).json({
           success: false,
           error: 'Test case not found'
         });
       }
+      
+      testInput = testCase.input || '';
+      expectedOutput = testCase.expectedOutput || '';
     }
 
     // Execute code with timeout handling
@@ -96,11 +112,11 @@ exports.executeCode = async (req, res) => {
 
     const executionPromise = executeCode(
       code,
-      LANGUAGE_IDS[language],
-      testCase ? testCase.input : '',
+      LANGUAGE_IDS[normalizedLanguage],
+      testInput,
       {
-        timeLimit: question.timeLimit,
-        memoryLimit: question.memoryLimit
+        timeLimit: question.timeLimit || 5,
+        memoryLimit: question.memoryLimit || 128000
       }
     );
 
@@ -108,12 +124,13 @@ exports.executeCode = async (req, res) => {
     const result = await Promise.race([executionPromise, timeoutPromise]);
 
     // Process execution result
-    if (testCase) {
-      const normalizedOutput = (result.output || '').trim().replace(/\n/g, '\n');
-      const normalizedExpected = testCase.expectedOutput.trim().replace(/\n/g, '\n');
+    if (expectedOutput) {
+      const normalizedOutput = (result.output || '').trim().replace(/\r\n/g, '\n');
+      const normalizedExpected = expectedOutput.trim().replace(/\r\n/g, '\n');
       
       // Add detailed comparison info
-      result.expected = testCase.expectedOutput;
+      result.expected = expectedOutput;
+      result.input = testInput;
       result.comparison = {
         success: normalizedOutput === normalizedExpected,
         outputLength: normalizedOutput.length,
@@ -124,16 +141,20 @@ exports.executeCode = async (req, res) => {
       };
       
       result.success = result.comparison.success;
+    } else {
+      // If no expected output, just return the execution result
+      result.success = !result.stderr && result.status_id === 3; // Status 3 = Accepted
     }
 
     // Add execution metadata
     const response = {
       ...result,
       metadata: {
-        timeLimit: question.timeLimit,
-        memoryLimit: question.memoryLimit,
+        timeLimit: question.timeLimit || 5,
+        memoryLimit: question.memoryLimit || 128000,
         language: language,
-        testCaseIndex: testCaseIndex
+        testCaseIndex: testCaseIndex,
+        questionId: questionId
       }
     };
 

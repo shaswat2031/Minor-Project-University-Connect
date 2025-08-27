@@ -17,7 +17,7 @@ export const executeCodingTest = async (code, language, questionId, testCaseInde
       throw new Error("No authentication token found");
     }
 
-    console.log(`Executing ${language} code for question ${questionId}, test case ${testCaseIndex}`);
+    console.log(`🚀 Executing ${language} code for question ${questionId}, test case ${testCaseIndex}`);
     
     // Use the correct endpoint for code execution
     const endpoint = `${API_URL}/coding/execute`;
@@ -35,15 +35,52 @@ export const executeCodingTest = async (code, language, questionId, testCaseInde
       }
     );
 
-    return response.data;
+    console.log(`✅ Execution result:`, response.data);
+
+    // Handle the new response format from our improved backend
+    const result = response.data;
+    
+    if (result.success === false) {
+      // Handle backend errors
+      return {
+        passed: false,
+        output: result.message || result.error || "Execution failed",
+        expected: result.expected || "",
+        error: true,
+        executionTime: null,
+        memory: null,
+        status: "Error",
+        input: result.input || ""
+      };
+    }
+
+    // Return standardized format for successful executions
+    return {
+      passed: result.passed || false,
+      output: result.output || "",
+      expected: result.expected || "",
+      executionTime: result.executionTime || null,
+      memory: result.memory || null,
+      status: result.status || "Unknown",
+      statusId: result.statusId || null,
+      stderr: result.stderr || null,
+      input: result.input || "",
+      error: false
+    };
+
   } catch (error) {
-    console.error("Error executing code:", error);
+    console.error("❌ Error executing code:", error);
     
     // Return a standardized error response
     return {
       passed: false,
-      output: error.response?.data?.output || error.message || "Error executing code",
+      output: error.response?.data?.message || error.response?.data?.error || error.message || "Error executing code",
+      expected: "",
       error: true,
+      executionTime: null,
+      memory: null,
+      status: "Network Error",
+      input: ""
     };
   }
 };

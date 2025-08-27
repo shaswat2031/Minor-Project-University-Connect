@@ -21,11 +21,12 @@ import ProfilePage from "./pages/ProfilePage";
 import MyProfile from "./pages/MyProfile";
 import Privacy from "./pages/Privacy";
 import Messages from "./pages/Messages"; // Import Messages component
+import CodeRunner from "./pages/CodeRunner"; // Import CodeRunner component
 import ChatButton from "./components/Chat/ChatButton";
 import AdminPanel from "./pages/AdminPanel";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
 import AIRoadmap from "./pages/AIRoadmap";
-import EnhancedProfilePage from "./pages/EnhancedProfilePage";
+import { ToastProvider } from "./components/Toast";
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -36,100 +37,108 @@ const App = () => {
   }, []);
 
   return (
-    <Router>
-      <div>
-        <Navbar
-          isAuthenticated={isAuthenticated}
-          setIsAuthenticated={setIsAuthenticated}
-        />
-        <Routes>
-          {/* Public routes */}
-          <Route path="/" element={<Home />} />
-          <Route
-            path="/login"
-            element={
-              isAuthenticated ? (
-                <Navigate to="/" />
-              ) : (
-                <Login setIsAuthenticated={setIsAuthenticated} />
-              )
-            }
+    <ToastProvider>
+      <Router>
+        <div>
+          <Navbar
+            isAuthenticated={isAuthenticated}
+            setIsAuthenticated={setIsAuthenticated}
           />
-          <Route
-            path="/register"
-            element={isAuthenticated ? <Navigate to="/" /> : <Register />}
-          />
-          {/* Protected user routes */}
-          <Route
-            path="/my-profile"
-            element={
-              <ProtectedRoute>
-                <MyProfile />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/student-connect"
-            element={
-              <ProtectedRoute>
-                <StudentConnect />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/messages"
-            element={
-              <ProtectedRoute>
-                <Messages />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/profile-setup" element={<ProfileSetup />} />
-          <Route path="/profile/:id" element={<ProfilePage />} />
-          <Route path="/enhanced-profile/:id" element={<EnhancedProfilePage />} />
-          <Route path="/enhanced-profile" element={<EnhancedProfilePage />} />
-          <Route
-            path="/ai-roadmap"
-            element={
-              <ProtectedRoute>
-                <AIRoadmap />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/certifications"
-            element={
-              <ProtectedRoute>
-                <Certifications />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/talent-marketplace"
-            element={
-              <ProtectedRoute>
-                <TalentMarketplace />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/profile" element={<UserProfile />} />
-          <Route path="/privacy" element={<Privacy />} />
-          {/* Admin protected route */}
-          <Route
-            path="/admin"
-            element={
-              <AdminProtectedRoute>
-                <AdminPanel />
-              </AdminProtectedRoute>
-            }
-          />
-        </Routes>
-        <Footer />
+          <Routes>
+            {/* Public routes */}
+            <Route path="/" element={<Home />} />
+            <Route
+              path="/login"
+              element={
+                isAuthenticated ? (
+                  <Navigate to="/" />
+                ) : (
+                  <Login setIsAuthenticated={setIsAuthenticated} />
+                )
+              }
+            />
+            <Route
+              path="/register"
+              element={isAuthenticated ? <Navigate to="/" /> : <Register />}
+            />
+            {/* Protected user routes */}
+            <Route
+              path="/my-profile"
+              element={
+                <ProtectedRoute>
+                  <MyProfile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/student-connect"
+              element={
+                <ProtectedRoute>
+                  <StudentConnect />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/messages"
+              element={
+                <ProtectedRoute>
+                  <Messages />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/code-runner"
+              element={
+                <ProtectedRoute>
+                  <CodeRunner />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/profile-setup" element={<ProfileSetup />} />
+            <Route path="/profile/:id" element={<ProfilePage />} />
+            <Route
+              path="/ai-roadmap"
+              element={
+                <ProtectedRoute>
+                  <AIRoadmap />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/certifications"
+              element={
+                <ProtectedRoute>
+                  <Certifications />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/talent-marketplace"
+              element={
+                <ProtectedRoute>
+                  <TalentMarketplace />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/profile" element={<UserProfile />} />
+            <Route path="/privacy" element={<Privacy />} />
+            {/* Admin protected route */}
+            <Route
+              path="/admin"
+              element={
+                <AdminProtectedRoute>
+                  <AdminPanel />
+                </AdminProtectedRoute>
+              }
+            />
+          </Routes>
+          <Footer />
 
-        {/* Chat Button - only show when authenticated */}
-        {isAuthenticated && <ChatButton />}
-      </div>
-    </Router>
+          {/* Chat Button - only show when authenticated */}
+          {isAuthenticated && <ChatButton />}
+        </div>
+      </Router>
+    </ToastProvider>
   );
 };
 

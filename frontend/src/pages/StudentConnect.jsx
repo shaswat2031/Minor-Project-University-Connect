@@ -6,11 +6,13 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { TextPlugin } from "gsap/TextPlugin";
 import chatService from "../services/chatService";
 import { io } from "socket.io-client";
+import { useToast } from "../components/Toast";
 
 // Register GSAP plugins
 gsap.registerPlugin(ScrollTrigger, TextPlugin);
 
 const StudentConnect = () => {
+  const { error } = useToast();
   const [students, setStudents] = useState([]);
   const [filteredStudents, setFilteredStudents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -496,19 +498,19 @@ const StudentConnect = () => {
       // Enhanced validation
       if (!student) {
         console.error("No student provided for chat");
-        alert("Unable to start chat. Please try again.");
+        error("Unable to start chat. Please try again.");
         return;
       }
 
       if (!student.user) {
         console.error("Student missing user ID:", student);
-        alert("Unable to start chat. Student information is incomplete.");
+        error("Unable to start chat. Student information is incomplete.");
         return;
       }
 
       if (!student.name) {
         console.error("Student missing name:", student);
-        alert("Unable to start chat. Student name is missing.");
+        error("Unable to start chat. Student name is missing.");
         return;
       }
 
@@ -525,9 +527,9 @@ const StudentConnect = () => {
           },
         },
       });
-    } catch (error) {
-      console.error("Error starting chat:", error);
-      alert("Failed to start chat. Please try again.");
+    } catch (err) {
+      console.error("Error starting chat:", err);
+      error("Failed to start chat. Please try again.");
     }
   };
 

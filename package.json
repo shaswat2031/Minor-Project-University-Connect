@@ -1,9 +1,11 @@
 {
   "scripts": {
-    "start": "node university-connect-backend/server.js", 
-    "dev": "nodemon university-connect-backend/server.js" 
+    "start": "node university-connect-backend/server.js",
+    "dev": "nodemon university-connect-backend/server.js"
   },
   "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "react-tsparticles": "^2.12.2",
     "tsparticles": "^3.8.1",

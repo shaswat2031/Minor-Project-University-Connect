@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useToast } from "../components/Toast";
 
 const Profile = () => {
+  const { success } = useToast();
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
 
@@ -38,7 +40,7 @@ const Profile = () => {
       await axios.put(`${import.meta.env.VITE_API_URL}/api/profile`, profile, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      alert("Profile updated successfully!");
+      success("Profile updated successfully!");
       setEditing(false);
     } catch (error) {
       console.error("Error updating profile:", error);
