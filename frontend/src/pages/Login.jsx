@@ -217,24 +217,18 @@ const Login = ({ setIsAuthenticated }) => {
       localStorage.setItem("token", token);
       localStorage.setItem("userId", res.data.userId);
       localStorage.setItem("userName", res.data.name);
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          id: res.data.userId,
-          name: res.data.name,
-          email: res.data.email,
-        })
-      );
-
       const userData = {
         id: res.data.userId,
         name: res.data.name,
         email: res.data.email,
-        education: res.data.education,
-        skills: res.data.skills,
-        careerGoals: res.data.careerGoals,
-        profilePicture: res.data.profilePicture,
+        education: res.data.education || [],
+        skills: res.data.skills || [],
+        careerGoals: res.data.careerGoals || "",
+        profilePicture: res.data.profilePicture || "",
       };
+
+      // Store complete user data in localStorage
+      localStorage.setItem("user", JSON.stringify(userData));
 
       setLoggedInUser(userData);
       setIsAuthenticated(true);
@@ -242,14 +236,16 @@ const Login = ({ setIsAuthenticated }) => {
       // Set flag for home page to show profile reminder
       sessionStorage.setItem('justLoggedIn', 'true');
 
-      // Check profile completion
-      const hasEducation = userData.education && userData.education.length > 0;
-      const hasSkills = userData.skills && userData.skills.length > 0;
-      const hasCareerGoals = userData.careerGoals && userData.careerGoals.trim() !== '';
-      const hasProfilePicture = userData.profilePicture && userData.profilePicture.trim() !== '';
-      
-      const completedFields = [hasEducation, hasSkills, hasCareerGoals, hasProfilePicture].filter(Boolean).length;
-      const isProfileIncomplete = completedFields < 2;
+      // Debug: Log userData to console for troubleshooting
+      console.log("User data after login:", userData);
+
+      // Check profile completion for reference (not used but kept for future enhancement)
+      // const hasEducation = userData.education && userData.education.length > 0;
+      // const hasSkills = userData.skills && userData.skills.length > 0;
+      // const hasCareerGoals = userData.careerGoals && userData.careerGoals.trim() !== '';
+      // const hasProfilePicture = userData.profilePicture && userData.profilePicture.trim() !== '';
+      // const completedFields = [hasEducation, hasSkills, hasCareerGoals, hasProfilePicture].filter(Boolean).length;
+      // const isProfileIncomplete = completedFields < 2;
 
       // Success animation and navigation
       gsap.to(formRef.current, {

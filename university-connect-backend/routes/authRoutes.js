@@ -2,6 +2,7 @@ const express = require("express");
 const bcryptUtil = require("../utils/bcryptUtil");
 const jwt = require("jsonwebtoken"); // Add this import
 const User = require("../models/User");
+const Profile = require("../models/Profile");
 
 const router = express.Router();
 
@@ -116,12 +117,19 @@ router.post("/login", async (req, res) => {
       expiresIn: "24h",
     });
 
+    // Fetch user profile data
+    let profile = await Profile.findOne({ user: user._id });
+    
     // Log the response for debugging
     const response = {
       userId: user._id,
       token: token,
       name: user.name,
       email: user.email,
+      education: profile?.education || [],
+      skills: profile?.skills || [],
+      careerGoals: profile?.bio || "", // Using bio as career goals since careerGoals field doesn't exist
+      profilePicture: profile?.profileImage || "",
     };
     console.log("Login Response:", response);
 

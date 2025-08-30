@@ -50,25 +50,50 @@ const Home = () => {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     const hasJustLoggedIn = sessionStorage.getItem("justLoggedIn");
 
+    console.log("Home: Checking profile completion", { 
+      hasUser: !!user.id, 
+      hasJustLoggedIn: !!hasJustLoggedIn, 
+      user 
+    });
+
     if (user.id && hasJustLoggedIn) {
       // Check profile completion
       const hasEducation = user.education && user.education.length > 0;
       const hasSkills = user.skills && user.skills.length > 0;
-      const hasCareerGoals = user.careerGoals && user.careerGoals.trim() !== "";
-      const hasProfilePicture = user.profilePicture && user.profilePicture.trim() !== "";
+      const hasCareerGoals = user.careerGoals && user.careerGoals.trim() !== ""; // This maps to bio from profile
+      const hasProfilePicture = user.profilePicture && user.profilePicture.trim() !== ""; // This maps to profileImage from profile
 
       const completedFields = [hasEducation, hasSkills, hasCareerGoals, hasProfilePicture].filter(Boolean).length;
       const isProfileIncomplete = completedFields < 2;
 
+      console.log("Home: Profile completion status", {
+        hasEducation,
+        hasSkills,
+        hasCareerGoals,
+        hasProfilePicture,
+        completedFields,
+        isProfileIncomplete
+      });
+
       if (isProfileIncomplete) {
         // Show popup after a short delay
         setTimeout(() => {
+          console.log("Home: Showing profile reminder popup");
           setShowProfileReminder(true);
         }, 1500);
       }
 
       // Clear the flag so popup doesn't show again
       sessionStorage.removeItem("justLoggedIn");
+    }
+    
+    // For testing: temporarily force show popup if user exists (remove this later)
+    const forceShowPopup = false; // Set to true for testing
+    if (forceShowPopup && user.id) {
+      setTimeout(() => {
+        console.log("Home: Force showing profile reminder popup for testing");
+        setShowProfileReminder(true);
+      }, 2000);
     }
   }, []);
 
