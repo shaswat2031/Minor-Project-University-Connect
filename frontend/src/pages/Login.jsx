@@ -6,13 +6,19 @@ import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
 import PropTypes from "prop-types";
 import { gsap } from "gsap";
+import ProfileReminderPopup from "../components/common/ProfileReminderPopup";
+import useProfileCompletion from "../hooks/useProfileCompletion";
 
 const Login = ({ setIsAuthenticated }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showProfileReminder, setShowProfileReminder] = useState(false);
+  const [loggedInUser, setLoggedInUser] = useState(null);
+
   const navigate = useNavigate();
+  const isProfileIncomplete = useProfileCompletion(loggedInUser);
 
   // GSAP refs
   const containerRef = useRef(null);
@@ -220,7 +226,32 @@ const Login = ({ setIsAuthenticated }) => {
         })
       );
 
-      // Success animation
+      const userData = {
+        id: res.data.userId,
+        name: res.data.name,
+        email: res.data.email,
+        education: res.data.education,
+        skills: res.data.skills,
+        careerGoals: res.data.careerGoals,
+        profilePicture: res.data.profilePicture,
+      };
+
+      setLoggedInUser(userData);
+      setIsAuthenticated(true);
+
+      // Set flag for home page to show profile reminder
+      sessionStorage.setItem('justLoggedIn', 'true');
+
+      // Check profile completion
+      const hasEducation = userData.education && userData.education.length > 0;
+      const hasSkills = userData.skills && userData.skills.length > 0;
+      const hasCareerGoals = userData.careerGoals && userData.careerGoals.trim() !== '';
+      const hasProfilePicture = userData.profilePicture && userData.profilePicture.trim() !== '';
+      
+      const completedFields = [hasEducation, hasSkills, hasCareerGoals, hasProfilePicture].filter(Boolean).length;
+      const isProfileIncomplete = completedFields < 2;
+
+      // Success animation and navigation
       gsap.to(formRef.current, {
         scale: 1.05,
         duration: 0.3,
@@ -232,12 +263,13 @@ const Login = ({ setIsAuthenticated }) => {
             duration: 0.5,
             ease: "power2.in",
             onComplete: () => {
-              setIsAuthenticated(true);
+              // Always go to home first, home will handle profile reminder
               navigate("/");
             },
           });
         },
       });
+
     } catch (err) {
       console.error("Login Error:", err);
 
@@ -268,6 +300,16 @@ const Login = ({ setIsAuthenticated }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Remove the profile reminder logic from login since it's now handled on home page
+  const handleCloseProfileReminder = () => {
+    setShowProfileReminder(false);
+  };
+
+  const handleGoToProfile = () => {
+    setShowProfileReminder(false);
+    navigate("/my-profile");
   };
 
   // Particle Background Settings
@@ -403,13 +445,21 @@ const Login = ({ setIsAuthenticated }) => {
         <p className="text-gray-400 text-sm text-center mt-4">
           Don&apos;t have an account?{" "}
           <Link
-                  to="/register"
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-                >
-                  Register
+            to="/register"
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+          >
+            Register
           </Link>
         </p>
       </div>
+
+      {/* Profile Reminder Popup */}
+      <ProfileReminderPopup
+        isOpen={showProfileReminder}
+        onClose={handleCloseProfileReminder}
+        user={loggedInUser}
+        onGoToProfile={handleGoToProfile}
+      />
     </div>
   );
 };

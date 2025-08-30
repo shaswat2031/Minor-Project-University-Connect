@@ -47,13 +47,12 @@ University Connect is a comprehensive platform designed to bridge the gap betwee
 ## 👥 Team Members
 
 | Name | Role | Expertise | Contribution |
-|------|------|-----------|-------------|
+
 | Shaswat | Full Stack Developer & Team Lead | Node.js, React, MongoDB | System Architecture, Backend Development, DevOps |
 | Harshita | Frontend Developer | React, UI/UX, GSAP | User Interface, Animations, Responsive Design |
 | Sugam | Backend Developer | Express, MongoDB, JWT | API Development, Database Schema, Authentication |
 | Vansh | UI/UX Designer | Figma, Tailwind CSS | Design System, User Experience, Prototyping |
 
-Our team brings together diverse skills in software development, design, and academic knowledge to create a comprehensive solution for modern educational challenges.
 
 ## 🛠️ Tech Stack
 
@@ -77,7 +76,6 @@ Our team brings together diverse skills in software development, design, and aca
   - **Monaco Editor**: VS Code's editor for code editing with syntax highlighting
   - **GSAP (GreenSock Animation Platform)**: Professional-grade animations
   - **Framer Motion**: React-specific animation library for UI transitions
-  - **React Flow**: Interactive node-based diagrams for roadmap visualization
   - **Face-API.js**: Face detection and recognition for certification proctoring
   - **React-PDF**: PDF generation for certificates and resumes
   - **Socket.io-client**: Real-time bidirectional communication
@@ -96,35 +94,18 @@ Our team brings together diverse skills in software development, design, and aca
 - **Database**: MongoDB with Mongoose 8.0
   - NoSQL document database for flexible schema design
   - Mongoose ODM for schema validation and middleware
-  - Indexing for optimized query performance
 
 - **Authentication & Security**:
   - **JWT (jsonwebtoken 9.0.2)**: Stateless authentication
-  - **bcrypt**: Secure password hashing with salt rounds
-  - **CORS**: Cross-Origin Resource Sharing protection
-  - **Rate Limiting**: Protection against brute force attacks
-
-- **Real-time Communication**: Socket.io 4.7
   - WebSocket-based real-time messaging
-  - Room-based chat functionality
   - Fallback to HTTP long-polling when WebSockets unavailable
 
 - **Code Execution**: Judge0 API integration via VM2
-  - Sandboxed code execution environment
-  - Support for multiple programming languages
-  - Resource limitations and security constraints
-
-- **AI Integration**: Google Generative AI
   - AI-powered roadmap generation
-  - Natural language processing for content analysis
   - Recommendation system for learning resources
 
 ### DevOps & Infrastructure
-- **Version Control**: Git with GitHub
-  - Feature branch workflow
-  - Pull request reviews
   - Semantic versioning
-
 - **Deployment**:
   - **Frontend**: Vercel with CDN distribution
   - **Backend**: Self-hosted with reverse proxy
@@ -140,18 +121,10 @@ Our team brings together diverse skills in software development, design, and aca
   - Log aggregation and analysis
   - Uptime monitoring with alerts
 
-## 🗂️ Project Structure
 
 ```
 university-connect/
-├── frontend/                   # React frontend application
-│   ├── public/                 # Static assets
-│   └── src/
-│       ├── api/                # API service functions
-│       ├── assets/             # Images, fonts, etc.
-│       ├── components/         # Reusable UI components
 │       ├── hooks/              # Custom React hooks
-│       ├── pages/              # Main application pages
 │       └── services/           # Helper services
 │
 ├── university-connect-backend/ # Node.js backend

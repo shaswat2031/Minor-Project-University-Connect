@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -11,11 +11,13 @@ import Hero from "../assets/Adult.jpeg";
 import team4 from "../assets/Shaswat.jpg";
 import certification from "../assets/Certificate.jpeg";
 import Parallaxeffect from "../assets/parallaxeffect.jpeg";
+import ProfileReminderPopup from "../components/common/ProfileReminderPopup";
 
 // Register GSAP plugins
 gsap.registerPlugin(ScrollTrigger, TextPlugin);
 
 const Home = () => {
+  const [showProfileReminder, setShowProfileReminder] = useState(false);
   const navigate = useNavigate();
 
   // Refs for GSAP animations
@@ -42,6 +44,33 @@ const Home = () => {
       ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
     };
   }, [navigate]);
+
+  useEffect(() => {
+    // Check if user just logged in and has incomplete profile
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const hasJustLoggedIn = sessionStorage.getItem("justLoggedIn");
+
+    if (user.id && hasJustLoggedIn) {
+      // Check profile completion
+      const hasEducation = user.education && user.education.length > 0;
+      const hasSkills = user.skills && user.skills.length > 0;
+      const hasCareerGoals = user.careerGoals && user.careerGoals.trim() !== "";
+      const hasProfilePicture = user.profilePicture && user.profilePicture.trim() !== "";
+
+      const completedFields = [hasEducation, hasSkills, hasCareerGoals, hasProfilePicture].filter(Boolean).length;
+      const isProfileIncomplete = completedFields < 2;
+
+      if (isProfileIncomplete) {
+        // Show popup after a short delay
+        setTimeout(() => {
+          setShowProfileReminder(true);
+        }, 1500);
+      }
+
+      // Clear the flag so popup doesn't show again
+      sessionStorage.removeItem("justLoggedIn");
+    }
+  }, []);
 
   const initializeAnimations = () => {
     // Ensure content is visible initially with fallback
@@ -373,6 +402,15 @@ const Home = () => {
         card.addEventListener("mouseleave", handleMouseLeave);
       }
     });
+  };
+
+  const handleCloseProfileReminder = () => {
+    setShowProfileReminder(false);
+  };
+
+  const handleGoToProfile = () => {
+    setShowProfileReminder(false);
+    navigate("/my-profile");
   };
 
   return (
@@ -863,6 +901,13 @@ const Home = () => {
           </div>
         </div>
       </section>
+
+      <ProfileReminderPopup
+        isOpen={showProfileReminder}
+        onClose={handleCloseProfileReminder}
+        user={JSON.parse(localStorage.getItem("user") || "{}")}
+        onGoToProfile={handleGoToProfile}
+      />
     </div>
   );
 };
