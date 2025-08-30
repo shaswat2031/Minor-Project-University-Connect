@@ -213,28 +213,32 @@ const ChatWindow = ({ onClose }) => {
       initial={{ opacity: 0, scale: 0.8, y: 20 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.8, y: 20 }}
-      className="fixed bottom-20 right-4 w-80 h-96 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg shadow-2xl border border-gray-600 flex flex-col backdrop-blur-sm z-[9999]"
+      className="fixed bottom-20 right-4 w-80 h-96 bg-gradient-to-br from-gray-800 via-gray-900 to-gray-900 rounded-xl shadow-2xl border border-gray-600/40 flex flex-col backdrop-blur-lg z-[9999] overflow-hidden"
+      style={{
+        backdropFilter: 'blur(20px) saturate(180%)',
+        background: 'rgba(31, 41, 55, 0.95)'
+      }}
     >
       {/* Enhanced Header */}
-      <div className="p-4 border-b border-gray-600/50 flex justify-between items-center bg-gradient-to-r from-gray-700 to-gray-800 rounded-t-lg">
-        <div className="flex items-center space-x-2">
+      <div className="p-4 border-b border-gray-600/40 flex justify-between items-center bg-gradient-to-r from-gray-700/80 to-gray-800/80 rounded-t-xl backdrop-blur-sm">
+        <div className="flex items-center space-x-3">
           {selectedConversation && (
             <button
               onClick={() => setSelectedConversation(null)}
-              className="p-1 text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors"
+              className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-600/50 rounded-lg transition-all"
             >
               <FaArrowLeft size={14} />
             </button>
           )}
           
           {selectedConversation ? (
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               <div className="relative">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold shadow-lg">
                   {selectedConversation.otherUser?.name?.charAt(0)?.toUpperCase() || "?"}
                 </div>
                 {isUserOnline(selectedConversation.otherUser.id) && (
-                  <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-gray-800"></div>
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-gray-800"></div>
                 )}
               </div>
               
@@ -243,14 +247,14 @@ const ChatWindow = ({ onClose }) => {
                   {selectedConversation.otherUser?.name || "Unknown User"}
                 </h3>
                 <p className="text-xs text-gray-400">
-                  {isUserOnline(selectedConversation.otherUser.id) ? "● Online" : "Offline"}
+                  {isUserOnline(selectedConversation.otherUser.id) ? "● Online" : "● Offline"}
                 </p>
               </div>
             </div>
           ) : (
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center space-x-3">
+              <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
               </div>
@@ -259,13 +263,16 @@ const ChatWindow = ({ onClose }) => {
           )}
         </div>
         
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-3">
           {!socketConnected && (
-            <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" title="Connecting..."></div>
+            <div className="flex items-center space-x-1">
+              <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+              <span className="text-xs text-yellow-400">Connecting...</span>
+            </div>
           )}
           <button 
             onClick={onClose} 
-            className="p-1 text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors"
+            className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-600/50 rounded-lg transition-all"
           >
             <FaTimes size={14} />
           </button>
@@ -300,21 +307,21 @@ const ChatWindow = ({ onClose }) => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
                     onClick={() => setSelectedConversation(conversation)}
-                    className="p-3 border-b border-gray-700/50 cursor-pointer hover:bg-gray-700/50 transition-all duration-200"
+                    className="p-4 border-b border-gray-700/30 cursor-pointer hover:bg-gray-700/30 transition-all duration-200 group"
                   >
                     <div className="flex items-center space-x-3">
                       <div className="relative flex-shrink-0">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold shadow-lg group-hover:shadow-blue-500/20 transition-shadow">
                           {conversation.otherUser?.name?.charAt(0)?.toUpperCase() || "?"}
                         </div>
                         {isUserOnline(conversation.otherUser?.id) && (
-                          <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-gray-800"></div>
+                          <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 rounded-full border-2 border-gray-800"></div>
                         )}
                       </div>
                       
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start mb-1">
-                          <p className="text-white text-sm font-medium truncate">
+                          <p className="text-white text-sm font-medium truncate group-hover:text-blue-200 transition-colors">
                             {conversation.otherUser?.name || "Unknown User"}
                           </p>
                           {conversation.lastMessage?.createdAt && (
@@ -324,13 +331,13 @@ const ChatWindow = ({ onClose }) => {
                           )}
                         </div>
                         
-                        <p className="text-gray-400 text-xs truncate">
+                        <p className="text-gray-400 text-xs truncate leading-relaxed">
                           {conversation.lastMessage?.content || "No messages"}
                         </p>
                       </div>
                       
                       {conversation.unreadCount > 0 && (
-                        <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
                           <span className="text-xs text-white font-bold">
                             {conversation.unreadCount > 9 ? '9+' : conversation.unreadCount}
                           </span>
@@ -354,11 +361,12 @@ const ChatWindow = ({ onClose }) => {
               className="flex-1 flex flex-col"
             >
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-3 space-y-3">
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-900/30">
                 {Array.isArray(messages) &&
                   messages.map((message, index) => {
                     const isCurrentUser = message.sender._id === currentUserId;
                     const showAvatar = index === 0 || messages[index - 1]?.sender._id !== message.sender._id;
+                    const nextMessageFromSameUser = messages[index + 1]?.sender._id === message.sender._id;
                     
                     return (
                       <motion.div
@@ -366,26 +374,48 @@ const ChatWindow = ({ onClose }) => {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.2 }}
-                        className={`flex ${isCurrentUser ? "justify-end" : "justify-start"}`}
+                        className={`flex ${isCurrentUser ? "justify-end" : "justify-start"} ${
+                          nextMessageFromSameUser ? 'mb-1' : 'mb-3'
+                        }`}
                       >
-                        <div className={`flex items-end space-x-2 max-w-xs ${isCurrentUser ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                        <div className={`flex items-end space-x-2 max-w-[85%] ${isCurrentUser ? 'flex-row-reverse space-x-reverse' : ''}`}>
                           {!isCurrentUser && showAvatar && (
-                            <div className="w-6 h-6 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+                            <div className="w-7 h-7 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0 shadow-lg">
                               {message.sender.name?.charAt(0)?.toUpperCase()}
                             </div>
                           )}
                           
-                          <div
-                            className={`px-3 py-2 rounded-lg text-sm shadow-lg ${
-                              isCurrentUser
-                                ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-br-sm"
-                                : "bg-gray-700 text-white rounded-bl-sm"
-                            } ${!showAvatar && !isCurrentUser ? 'ml-8' : ''}`}
-                          >
-                            <p className="break-words">{message.content}</p>
-                            <p className={`text-xs mt-1 ${isCurrentUser ? 'text-blue-100' : 'text-gray-400'}`}>
-                              {formatMessageTime(message.createdAt)}
-                            </p>
+                          <div className="flex flex-col">
+                            {!isCurrentUser && showAvatar && (
+                              <span className="text-xs text-gray-400 mb-1 px-1">
+                                {message.sender.name}
+                              </span>
+                            )}
+                            
+                            <div
+                              className={`px-4 py-2.5 rounded-2xl text-sm shadow-lg relative ${
+                                isCurrentUser
+                                  ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white"
+                                  : "bg-gray-700 text-white border border-gray-600/30"
+                              } ${
+                                isCurrentUser 
+                                  ? showAvatar 
+                                    ? 'rounded-br-lg' 
+                                    : 'rounded-br-2xl'
+                                  : showAvatar 
+                                    ? 'rounded-bl-lg' 
+                                    : 'rounded-bl-2xl'
+                              } ${!showAvatar && !isCurrentUser ? 'ml-9' : ''}`}
+                            >
+                              <p className="break-words leading-relaxed whitespace-pre-wrap">
+                                {message.content}
+                              </p>
+                              <p className={`text-xs mt-1.5 ${
+                                isCurrentUser ? 'text-blue-100/80' : 'text-gray-400'
+                              }`}>
+                                {formatMessageTime(message.createdAt)}
+                              </p>
+                            </div>
                           </div>
                         </div>
                       </motion.div>
@@ -396,23 +426,23 @@ const ChatWindow = ({ onClose }) => {
                 <AnimatePresence>
                   {typingUser && (
                     <motion.div
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                      className="flex justify-start"
+                      initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.8, y: 10 }}
+                      className="flex justify-start mb-3"
                     >
                       <div className="flex items-end space-x-2">
-                        <div className="w-6 h-6 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-xs font-semibold">
+                        <div className="w-7 h-7 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-xs font-semibold shadow-lg">
                           {typingUser.name?.charAt(0)?.toUpperCase()}
                         </div>
                         
-                        <div className="bg-gray-700 px-3 py-2 rounded-lg rounded-bl-sm">
+                        <div className="bg-gray-700/80 border border-gray-600/30 px-4 py-3 rounded-2xl rounded-bl-lg backdrop-blur-sm">
                           <div className="flex items-center space-x-1">
-                            <span className="text-xs text-gray-300 mr-1">typing</span>
+                            <span className="text-xs text-gray-300 mr-2">typing</span>
                             <div className="flex space-x-1">
-                              <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"></div>
-                              <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                              <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                              <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                              <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                              <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                             </div>
                           </div>
                         </div>
@@ -425,8 +455,8 @@ const ChatWindow = ({ onClose }) => {
               </div>
 
               {/* Enhanced Message Input */}
-              <div className="p-3 border-t border-gray-600/50">
-                <div className="flex items-center space-x-2">
+              <div className="p-4 border-t border-gray-600/50 bg-gray-800/50 backdrop-blur-sm">
+                <div className="flex items-end space-x-3">
                   <div className="flex-1 relative">
                     <input
                       type="text"
@@ -435,16 +465,21 @@ const ChatWindow = ({ onClose }) => {
                       onKeyPress={handleKeyPress}
                       placeholder="Type a message..."
                       disabled={!socketConnected}
-                      className="w-full px-3 py-2 bg-gray-700 text-white rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 transition-all placeholder-gray-400"
+                      className="w-full px-4 py-3 bg-gray-700/80 text-white rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-gray-700 disabled:opacity-50 transition-all placeholder-gray-400 border border-gray-600/30 backdrop-blur-sm"
                     />
+                    {!socketConnected && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" title="Reconnecting..."></div>
+                      </div>
+                    )}
                   </div>
                   
                   <button
                     onClick={sendMessage}
                     disabled={!newMessage.trim() || !socketConnected}
-                    className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                    className="p-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-blue-500/25 active:scale-95 flex-shrink-0"
                   >
-                    <FaPaperPlane size={12} />
+                    <FaPaperPlane size={14} />
                   </button>
                 </div>
               </div>
