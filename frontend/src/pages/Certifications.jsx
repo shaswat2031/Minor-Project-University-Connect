@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import PropTypes from 'prop-types';
 import { FaExclamationTriangle, FaDownload, FaCode, FaPlay, FaQuestionCircle, FaCheck, FaTimes, FaLightbulb, FaClock, FaMemory } from "react-icons/fa";
@@ -11,8 +11,10 @@ import {
 import { executeCodingTest, runAllTestCases } from "../api/codingService";
 import jsPDF from "jspdf";
 import Confetti from "react-confetti";
+import "../styles/anticheat.css";
 
 import { useToast } from "../components/Toast";
+import AntiCheatWrapper from "../components/AntiCheatWrapper";
 
 // Define styles for the certificate
 const styles = StyleSheet.create({
@@ -225,6 +227,17 @@ const Certifications = () => {
   const [certificateName, setCertificateName] = useState("");
   const [isGeneratingCertificate, setIsGeneratingCertificate] = useState(false);
   const [certificateDownloaded, setCertificateDownloaded] = useState(false);
+  
+  // Anti-cheat state
+  const [showWarning, setShowWarning] = useState(false);
+  const [warningMessage, setWarningMessage] = useState("");
+  
+  // Show warning message when copy/paste is attempted
+  const showCopyPasteWarning = useCallback((action) => {
+    setWarningMessage(`${action} is not allowed during certification tests!`);
+    setShowWarning(true);
+    setTimeout(() => setShowWarning(false), 3000);
+  }, []);
   
   // Enhanced code editor state
   const [syntaxHighlighting, setSyntaxHighlighting] = useState(true);
@@ -646,6 +659,68 @@ const Certifications = () => {
       };
     }
   }, [testStarted]);
+
+  // Anti copy-paste protection
+  useEffect(() => {
+    if (testStarted) {
+      const preventCopyPaste = (e) => {
+        e.preventDefault();
+        showCopyPasteWarning(e.type === "copy" ? "Copying" : 
+                            e.type === "paste" ? "Pasting" : 
+                            e.type === "cut" ? "Cutting" : "This action");
+        return false;
+      };
+      
+      const preventKeyboardShortcuts = (e) => {
+        // Prevent Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+P, Ctrl+S, Ctrl+A
+        if (
+          e.ctrlKey && 
+          (e.key === 'c' || e.key === 'v' || e.key === 'x' || 
+           e.key === 'p' || e.key === 's' || e.key === 'a')
+        ) {
+          e.preventDefault();
+          showCopyPasteWarning(
+            e.key === 'c' ? "Copying (Ctrl+C)" :
+            e.key === 'v' ? "Pasting (Ctrl+V)" :
+            e.key === 'x' ? "Cutting (Ctrl+X)" :
+            e.key === 'p' ? "Printing (Ctrl+P)" :
+            e.key === 's' ? "Saving (Ctrl+S)" :
+            e.key === 'a' ? "Selecting all (Ctrl+A)" : "This keyboard shortcut"
+          );
+          return false;
+        }
+        
+        // Prevent PrintScreen key
+        if (e.key === 'PrintScreen') {
+          e.preventDefault();
+          showCopyPasteWarning("Screen capture");
+          return false;
+        }
+      };
+      
+      const preventContextMenu = (e) => {
+        e.preventDefault();
+        showCopyPasteWarning("Right-click context menu");
+        return false;
+      };
+      
+      // Add event listeners
+      document.addEventListener('copy', preventCopyPaste);
+      document.addEventListener('paste', preventCopyPaste);
+      document.addEventListener('cut', preventCopyPaste);
+      document.addEventListener('keydown', preventKeyboardShortcuts);
+      document.addEventListener('contextmenu', preventContextMenu);
+      
+      // Clean up event listeners when component unmounts
+      return () => {
+        document.removeEventListener('copy', preventCopyPaste);
+        document.removeEventListener('paste', preventCopyPaste);
+        document.removeEventListener('cut', preventCopyPaste);
+        document.removeEventListener('keydown', preventKeyboardShortcuts);
+        document.removeEventListener('contextmenu', preventContextMenu);
+      };
+    }
+  }, [testStarted, showCopyPasteWarning]);
 
   // Updated fetchQuestions function to get mixed MCQ and coding questions
   const fetchQuestions = async (category) => {
@@ -1803,7 +1878,21 @@ const Certifications = () => {
     const progress = ((currentQuestion + 1) / questions.length) * 100;
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 p-6 certification-test">
+        {/* Warning Message for Copy/Paste attempts */}
+        {showWarning && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg"
+          >
+            <div className="flex items-center">
+              <FaExclamationTriangle className="mr-2" />
+              <span>{warningMessage}</span>
+            </div>
+          </motion.div>
+        )}
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="bg-gray-800 rounded-xl p-6 mb-6 border border-gray-700">
@@ -2317,14 +2406,6 @@ const Certifications = () => {
       </div>
     );
   }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
-      {/* ... existing JSX ... */}
-      
-      {/* ... rest of existing JSX ... */}
-    </div>
-  );
 };
 
 export default Certifications;

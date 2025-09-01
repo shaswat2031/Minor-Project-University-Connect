@@ -1,0 +1,78 @@
+/* Create a custom CSS file to disable text selection and copying globally on certification pages */
+
+/* Disable text selection */
+.no-select {
+  -webkit-user-select: none; /* Safari */
+  -ms-user-select: none; /* IE 10 and IE 11 */
+  user-select: none; /* Standard syntax */
+}
+
+/* Disable context menu */
+.no-context-menu {
+  -webkit-touch-callout: none;
+}
+
+/* Prevent drag actions */
+.no-drag {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+}
+
+/* Apply to certification test elements */
+.certification-test {
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  cursor: default !important;
+}
+
+/* Add blur to indicate text cannot be selected */
+.certification-test *::selection {
+  background: transparent;
+}
+
+/* Apply specific styles to MCQ options */
+.certification-test button,
+.certification-test h2, 
+.certification-test p,
+.certification-test span {
+  -webkit-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  pointer-events: auto !important; /* Allow buttons to be clicked */
+}
+
+/* Special case: Code editor should allow selection but prevent external copy-paste */
+.certification-test pre,
+.certification-test code,
+.certification-test textarea {
+  -webkit-user-select: text !important;
+  -ms-user-select: text !important;
+  user-select: text !important;
+  cursor: text !important;
+}
+
+/* Apply to code editor container but not the code editor itself */
+.certification-test .code-container {
+  position: relative;
+}
+
+/* Show warning when right-click attempted */
+.certification-test .warning-message {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(220, 38, 38, 0.9);
+  color: white;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  z-index: 1000;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  animation: fadeOut 2s forwards;
+  pointer-events: none;
+}
