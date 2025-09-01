@@ -1,6 +1,6 @@
 # University Connect
 
-<<<<<<< HEAD
+
 [![Contributors](https://img.shields.io/github/contributors/shaswat2031/Minor-Project-University-Connect.svg)](https://github.com/shaswat2031/Minor-Project-University-Connect/graphs/contributors)
 [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
 [![Node Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/)
